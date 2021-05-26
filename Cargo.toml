@@ -5,9 +5,13 @@ authors = ["Ivan Chepurnyi <ivan.chepurnyi@ecomdev.org>"]
 edition = "2018"
 repository = "https://github.com/EcomDev/profusion-rs"
 
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "profusion"
+crate-type = [ "lib" ]
 
 [dependencies.tokio]
 version = "1.6"
 features = [ "rt", "time", "macros" ]
+
+[dependencies.futures]
+version = "0.3"
