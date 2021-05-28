@@ -15,3 +15,7 @@ features = [ "rt", "time", "macros" ]
 
 [dependencies.futures]
 version = "0.3"
+
+[features]
+test = []
+

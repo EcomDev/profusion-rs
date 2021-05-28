@@ -1,10 +1,6 @@
 mod realtime;
 
-#[cfg(test)]
-mod test_objects;
-
-#[cfg(test)]
-pub(crate) use test_objects::*;
+pub(crate) use realtime::RealtimeReport;
 
 use std::time::Instant;
 
@@ -16,6 +12,9 @@ pub(crate) trait EventProcessor<'a> {
     fn process_timeout(&mut self, name: &'a str, start: Instant, end: Instant);
 }
 
+// Used to report current status
+// 
+//
 pub trait RealtimeReporter {
     fn operation_started(&self) {}
 
@@ -26,8 +25,10 @@ pub trait RealtimeReporter {
     fn connection_finished(&self) {}
 }
 
-pub(crate) trait RealtimeStatus {
+pub trait RealtimeStatus {
     fn connections(&self) -> usize;
 
     fn operations(&self) -> usize;
+
+    fn total_operations(&self) -> usize;
 }

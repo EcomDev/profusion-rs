@@ -7,14 +7,16 @@ use tokio::time::timeout;
 use super::*;
 use crate::report::RealtimeReporter;
 
+pub(crate) const DEFAULT_RUN_CODE: &str = "default";
+
 #[derive(Debug)]
-pub struct Runner<'a, R: RealtimeReporter> {
+pub struct Runner<'a, R> {
     events: Vec<Event<'a>>,
     timeout: Duration,
     reporter: R,
 }
 
-impl <R: RealtimeReporter + Clone> Clone for Runner<'_, R> {
+impl <R: Clone> Clone for Runner<'_, R> {
     fn clone(&self) -> Self {
         Self::new(
             self.timeout.clone(),
@@ -24,7 +26,7 @@ impl <R: RealtimeReporter + Clone> Clone for Runner<'_, R> {
     }
 }
 
-impl<'a, R: RealtimeReporter> Runner<'a, R> {
+impl<R> Runner<'_, R> {
     fn new(timeout: Duration, capacity: usize, reporter: R) -> Self {
         Self {
             events: Vec::with_capacity(capacity),
@@ -32,10 +34,13 @@ impl<'a, R: RealtimeReporter> Runner<'a, R> {
             reporter,
         }
     }
+}
+
+impl<'a, R: RealtimeReporter + Default> Runner<'a, R> {
 
     pub(crate) async fn init<T, TFut>(
         &mut self,
-        name: &'static str,
+        name: &'a str,
         activity: fn() -> TFut,
     ) -> Result<T>
     where
@@ -69,7 +74,9 @@ impl<'a, R: RealtimeReporter> Runner<'a, R> {
     {
         let start = Instant::now();
 
-        self.reporter.operation_started();
+        if name == DEFAULT_RUN_CODE {
+            self.reporter.operation_started();
+        }
 
         let result = match timeout(self.timeout, activity(state)).await {
             Ok(result) => {
@@ -88,7 +95,10 @@ impl<'a, R: RealtimeReporter> Runner<'a, R> {
             }
         };
 
-        self.reporter.operation_finished();
+        if name == DEFAULT_RUN_CODE {
+            self.reporter.operation_finished();
+        }
+        
         result
     }
 
@@ -106,42 +116,11 @@ impl<'a, R: RealtimeReporter> Runner<'a, R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::report::FakeProcessor;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
+    use crate::{FakeProcessor, RealtimeReport, RealtimeStatus};
     use tokio::time::sleep;
 
-    #[derive(Clone)]
-    struct FakeReporter {
-        operations: Arc<AtomicUsize>,
-    }
-
-    impl RealtimeReporter for FakeReporter {
-        fn operation_started(&self) {
-            self.operations.fetch_add(1, Ordering::Relaxed);
-        }
-
-        fn operation_finished(&self) {
-            self.operations.fetch_sub(1, Ordering::Relaxed);
-        }
-    }
-
-    impl Default for FakeReporter {
-        fn default() -> Self {
-            Self {
-                operations: Arc::new(0.into()),
-            }
-        }
-    }
-
-    impl FakeReporter {
-        fn current_runners(&self) -> usize {
-            self.operations.load(Ordering::Relaxed)
-        }
-    }
-
-    fn create_runner<'a>() -> Runner<'a, FakeReporter> {
-        return Runner::new(Duration::from_secs(3600), 5, FakeReporter::default());
+    fn create_runner<'a>() -> Runner<'a, RealtimeReport> {
+        return Runner::new(Duration::from_secs(3600), 5, RealtimeReport::default());
     }
 
     async fn add_one(value: usize) -> Result<usize> {
@@ -197,7 +176,7 @@ mod tests {
 
     #[tokio::test]
     async fn returns_timeout_error_when_task_is_too_long() {
-        let mut runner = Runner::new(Duration::from_millis(5), 1, FakeReporter::default());
+        let mut runner = Runner::new(Duration::from_millis(5), 1, RealtimeReport::default());
 
         assert_eq!(
             format!(
@@ -213,7 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn timeouts_task_when_it_takes_too_long() {
-        let mut runner = Runner::new(Duration::from_millis(5), 1, FakeReporter::default());
+        let mut runner = Runner::new(Duration::from_millis(5), 1, RealtimeReport::default());
 
         runner
             .run("too_long", add_one_and_wait_10ms, 123)
@@ -324,13 +303,13 @@ mod tests {
         for n in 0..5 {
             let mut local_runner = runner.clone();
             tokio::spawn(
-                async move { local_runner.run("default", add_one_and_wait_10ms, n).await },
+                async move { local_runner.run(DEFAULT_RUN_CODE, add_one_and_wait_10ms, n).await },
             );
         }
 
         sleep(Duration::from_millis(5)).await;
 
-        assert_eq!(reporter.current_runners(), 5);
+        assert_eq!(reporter.operations(), 5);
     }
 
     #[tokio::test]
@@ -340,15 +319,34 @@ mod tests {
         let reporter = runner.reporter.clone();
 
         for n in 0..5 {
-            let mut local_runner = runner.clone();
+            let mut thread_runner = runner.clone();
             tokio::spawn(
-                async move { local_runner.run("default", add_one_and_wait_10ms, n).await },
+                async move { thread_runner.run(DEFAULT_RUN_CODE, add_one_and_wait_10ms, n).await },
             );
         }
 
-        sleep(Duration::from_millis(11)).await;
+        sleep(Duration::from_millis(20)).await;
 
-        assert_eq!(reporter.current_runners(), 0);
+        assert_eq!(reporter.operations(), 0);
+    }
+
+    #[tokio::test]
+    async fn does_not_increment_reporter_when_non_default_run() {
+        let runner = create_runner();
+
+        let reporter = runner.reporter.clone();
+
+        for n in 0..5 {
+            let mut local_runner = runner.clone();
+            tokio::spawn(
+                async move { local_runner.run("non_default", add_one, n).await },
+            );
+        }
+
+        sleep(Duration::from_millis(3)).await;
+
+        assert_eq!(reporter.total_operations(), 0);
+        assert_eq!(reporter.operations(), 0);
     }
 
     #[tokio::test]

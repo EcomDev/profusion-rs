@@ -3,8 +3,14 @@
     missing_docs,
     unreachable_pub
 )]
-
-mod runner;
 mod report;
+mod runner;
 
-pub use runner::{EventType, Runner};
+#[cfg(any(test, feature = "test"))]
+mod test_objects;
+
+#[cfg(any(test, feature = "test"))]
+pub use test_objects::*;
+
+pub use runner::*;
+pub use report::*;

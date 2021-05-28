@@ -1,6 +1,7 @@
 use super::{RealtimeReporter, RealtimeStatus};
 use std::sync::{Arc, atomic::AtomicUsize, atomic::Ordering};
 
+#[derive(Debug)]
 struct Counter(Arc<AtomicUsize>);
 
 impl Default for Counter
@@ -32,26 +33,20 @@ impl Counter
     }
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct RealtimeReport
 {
     operations: Counter,
-    connections: Counter
-}
-
-impl Clone for RealtimeReport {
-    fn clone(&self) -> Self {
-        Self {
-            operations: self.operations.clone(),
-            connections: self.connections.clone()
-        }
-    }
+    connections: Counter,
+    total_operations: Counter
 }
 
 impl Default for RealtimeReport {
     fn default() -> Self {
         Self {
             operations: Counter::default(),
-            connections: Counter::default()
+            connections: Counter::default(),
+            total_operations: Counter::default()
         }
     }
 }
@@ -59,22 +54,35 @@ impl Default for RealtimeReport {
 impl RealtimeReporter for RealtimeReport
 {
     fn operation_started(&self) {
-        self.operations.increment()
+        self.operations.increment();
+        self.total_operations.increment();
     }
 
     fn operation_finished(&self) {
-        self.operations.decrement()
+        self.operations.decrement();
+    }
+
+    fn connection_started(&self) {
+        self.connections.increment();
+    }
+
+    fn connection_finished(&self) {
+        self.connections.decrement();
     }
 }
 
 impl RealtimeStatus for RealtimeReport
 {
     fn connections(&self) -> usize {
-        todo!()
+        self.connections.value()
     }
 
     fn operations(&self) -> usize {
         self.operations.value()
+    }
+
+    fn total_operations(&self) -> usize { 
+        self.total_operations.value()
     }
 }
 
@@ -98,7 +106,7 @@ mod tests
     }
 
     #[test]
-    fn each_clone_increments_number_of_operations() {
+    fn counts_when_operation_starts() {
         let report = RealtimeReport::default();
 
 
@@ -108,12 +116,41 @@ mod tests
     }
 
     #[test]
-    fn operations_get_reduced_back_to_when_they_are_over() {
+    fn counts_when_operations_finish() {
         let report = RealtimeReport::default();
 
         run_on_threads(7, report.clone(), |report| report.operation_started() );
         run_on_threads(4, report.clone(), |report| report.operation_finished() );
 
         assert_eq!(report.operations(), 3);
+    }
+
+    #[test]
+    fn counts_when_connection_starts() {
+        let report = RealtimeReport::default();
+
+        run_on_threads(99, report.clone(), |report| report.connection_started() );
+
+        assert_eq!(report.connections(), 99);
+    }
+
+    #[test]
+    fn counts_when_connection_finishes() {
+        let report = RealtimeReport::default();
+
+        run_on_threads(99, report.clone(), |report| report.connection_started() );
+        run_on_threads(80, report.clone(), |report| report.connection_finished() );
+
+        assert_eq!(report.connections(), 19);
+    }
+
+    #[test]
+    fn counts_total_operations_started() {
+        let report = RealtimeReport::default();
+
+        run_on_threads(99, report.clone(), |report| report.operation_started() );
+        run_on_threads(80, report.clone(), |report| report.operation_finished() );
+
+        assert_eq!(report.total_operations(), 99);
     }
 }

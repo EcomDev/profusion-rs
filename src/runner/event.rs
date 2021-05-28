@@ -57,7 +57,7 @@ impl<'a> From<(&'a str, Instant, Instant, EventType)> for Event<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::report::FakeProcessor;
+    use crate::FakeProcessor;
     use std::time::{Duration, Instant};
 
     impl Event<'_> {
