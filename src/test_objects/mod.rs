@@ -2,7 +2,7 @@ use super::{EventProcessor, RealtimeStatus};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct RealtimeStatusStub {
+pub struct RealtimeStatusStub {
     connections: usize,
     operations: usize,
     total_operations: usize
@@ -53,16 +53,16 @@ impl RealtimeStatus for RealtimeStatusStub {
     }
 }
 
-pub(crate) struct FakeProcessor {
+pub struct FakeProcessor {
     items: Vec<(String, Duration)>,
 }
 
 impl FakeProcessor {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self { items: vec![] }
     }
 
-    pub(crate) fn verify(self, items: Vec<(&str, Duration)>) {
+    pub fn verify(self, items: Vec<(&str, Duration)>) {
         assert_eq!(
             self.items
                 .iter()
@@ -72,7 +72,7 @@ impl FakeProcessor {
         );
     }
 
-    pub(crate) fn verify_names(self, items: Vec<&str>) {
+    pub fn verify_names(self, items: Vec<&str>) {
         assert_eq!(
             self.items
                 .iter()
