@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Ivan Chepurnyi <ivan.chepurnyi@ecomdev.org>"]
 edition = "2018"
 repository = "https://github.com/EcomDev/profusion-rs"
+license = "MIT"
 
 [lib]
 name = "profusion"
@@ -18,4 +19,3 @@ version = "0.3"
 
 [features]
 test = []
-
