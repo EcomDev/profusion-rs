@@ -1,8 +1,15 @@
 mod event;
-mod runner;
 mod limit;
-
-pub use {event::EventType, runner::Runner, limit::* };
+mod runner;
 
 pub(self) use crate::report::EventProcessor;
 pub(self) use event::Event;
+
+pub use {
+    event::EventType,
+    limit::{
+        CompoundLimiter, ConcurrencyLimiter, GradualConcurrencyLimiter, Limit,
+        Limiter, MaxDurationLimiter, MaxOperationsLimiter,
+    },
+    runner::Runner,
+};

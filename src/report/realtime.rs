@@ -1,31 +1,41 @@
 use super::{RealtimeReporter, RealtimeStatus};
-use std::sync::{Arc, atomic::AtomicUsize, atomic::Ordering};
+use crate::{Arc, AtomicUsize, Ordering};
 
 #[derive(Debug)]
+
 struct Counter(Arc<AtomicUsize>);
 
-impl Default for Counter
-{
+impl Default for Counter {
     fn default() -> Self {
         Self(Arc::from(AtomicUsize::new(0)))
     }
 }
 
-impl Clone for Counter
-{
+impl Clone for Counter {
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0))
     }
 }
 
-impl Counter
-{
+const COUNTER_STEP: usize = 1;
+
+impl Counter {
     fn increment(&self) {
-        self.0.fetch_add(1, Ordering::Relaxed);
+        match self.0.fetch_add(COUNTER_STEP, Ordering::Relaxed) {
+            usize::MAX => {
+                self.0.fetch_sub(COUNTER_STEP, Ordering::Relaxed);
+            }
+            _ => (),
+        }
     }
 
     fn decrement(&self) {
-        self.0.fetch_sub(1, Ordering::Relaxed);
+        match self.0.fetch_sub(COUNTER_STEP, Ordering::Relaxed) {
+            usize::MIN => {
+                self.0.fetch_add(COUNTER_STEP, Ordering::Relaxed);
+            }
+            _ => (),
+        }
     }
 
     fn value(&self) -> usize {
@@ -34,11 +44,10 @@ impl Counter
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct RealtimeReport
-{
+pub(crate) struct RealtimeReport {
     operations: Counter,
     connections: Counter,
-    total_operations: Counter
+    total_operations: Counter,
 }
 
 impl Default for RealtimeReport {
@@ -46,15 +55,15 @@ impl Default for RealtimeReport {
         Self {
             operations: Counter::default(),
             connections: Counter::default(),
-            total_operations: Counter::default()
+            total_operations: Counter::default(),
         }
     }
 }
 
-impl RealtimeReporter for RealtimeReport
-{
+impl RealtimeReporter for RealtimeReport {
     fn operation_started(&self) {
         self.operations.increment();
+
         self.total_operations.increment();
     }
 
@@ -71,8 +80,7 @@ impl RealtimeReporter for RealtimeReport
     }
 }
 
-impl RealtimeStatus for RealtimeReport
-{
+impl RealtimeStatus for RealtimeReport {
     fn connections(&self) -> usize {
         self.connections.value()
     }
@@ -81,76 +89,151 @@ impl RealtimeStatus for RealtimeReport
         self.operations.value()
     }
 
-    fn total_operations(&self) -> usize { 
+    fn total_operations(&self) -> usize {
         self.total_operations.value()
     }
 }
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
-    use std::thread::spawn;
+    use loom::thread::{spawn, yield_now, JoinHandle};
 
-    fn run_on_threads<T: 'static + Clone + Send>(threads: usize, value: T, operation: fn(T) -> ())
-    {
-        let handles: Vec<_> = (0..threads).into_iter()
-            .map(|_| {
-                let passed = value.clone();
-                spawn(move || operation(passed))
-            }).collect();
+    impl From<usize> for Counter {
+        fn from(value: usize) -> Self {
+            Self(Arc::from(AtomicUsize::from(value)))
+        }
+    }
 
-        for thread in handles.into_iter() {
-            thread.join().unwrap();
+    fn run_on_threads<T: 'static + Clone + Send>(
+        value: T,
+        operation: fn(T) -> (),
+    ) -> JoinHandle<()> {
+        spawn(move || operation(value.clone()))
+    }
+
+    fn repeat<T>(times: usize, value: &T, operation: fn(&T) -> ()) -> () {
+        for _ in 0..times {
+            operation(value);
+
+            yield_now();
         }
     }
 
     #[test]
     fn counts_when_operation_starts() {
-        let report = RealtimeReport::default();
+        loom::model(|| {
+            let report = RealtimeReport::default();
 
+            run_on_threads(report.clone(), |report| {
+                repeat(7, &report, |report| report.operation_started());
+            })
+            .join()
+            .unwrap();
 
-        run_on_threads(7, report.clone(), |report| report.operation_started() );
-
-        assert_eq!(report.operations(), 7);
+            assert_eq!(report.operations(), 7);
+        });
     }
 
     #[test]
     fn counts_when_operations_finish() {
-        let report = RealtimeReport::default();
+        loom::model(|| {
+            let report = RealtimeReport::default();
 
-        run_on_threads(7, report.clone(), |report| report.operation_started() );
-        run_on_threads(4, report.clone(), |report| report.operation_finished() );
+            run_on_threads(report.clone(), |report| {
+                repeat(7, &report, |report| report.operation_started());
 
-        assert_eq!(report.operations(), 3);
+                repeat(4, &report, |report| report.operation_finished());
+            })
+            .join()
+            .unwrap();
+
+            assert_eq!(report.operations(), 3);
+        });
     }
 
     #[test]
     fn counts_when_connection_starts() {
-        let report = RealtimeReport::default();
+        loom::model(|| {
+            let report = RealtimeReport::default();
 
-        run_on_threads(99, report.clone(), |report| report.connection_started() );
+            run_on_threads(report.clone(), |report| {
+                repeat(99, &report, |report| report.connection_started());
+            })
+            .join()
+            .unwrap();
 
-        assert_eq!(report.connections(), 99);
+            assert_eq!(report.connections(), 99);
+        });
     }
 
     #[test]
     fn counts_when_connection_finishes() {
-        let report = RealtimeReport::default();
+        loom::model(|| {
+            let report = RealtimeReport::default();
 
-        run_on_threads(99, report.clone(), |report| report.connection_started() );
-        run_on_threads(80, report.clone(), |report| report.connection_finished() );
+            run_on_threads(report.clone(), |report| {
+                repeat(99, &report, |report| report.connection_started());
 
-        assert_eq!(report.connections(), 19);
+                repeat(80, &report, |report| report.connection_finished());
+            })
+            .join()
+            .unwrap();
+
+            assert_eq!(report.connections(), 19);
+        });
     }
 
     #[test]
     fn counts_total_operations_started() {
-        let report = RealtimeReport::default();
+        loom::model(|| {
+            let report = RealtimeReport::default();
 
-        run_on_threads(99, report.clone(), |report| report.operation_started() );
-        run_on_threads(80, report.clone(), |report| report.operation_finished() );
+            run_on_threads(report.clone(), |report| {
+                repeat(99, &report, |report| report.operation_started());
 
-        assert_eq!(report.total_operations(), 99);
+                repeat(80, &report, |report| report.operation_finished());
+            })
+            .join()
+            .unwrap();
+
+            assert_eq!(report.total_operations(), 99);
+        });
+    }
+
+    #[test]
+    fn counter_does_not_underflow() {
+        loom::model(|| {
+            let counter = Counter::default();
+
+            let increment_handle = run_on_threads(counter.clone(), |counter| {
+                repeat(100, &counter, |counter| counter.increment());
+            });
+
+            let decrement_handle = run_on_threads(counter.clone(), |counter| {
+                repeat(200, &counter, |counter| counter.decrement());
+            });
+
+            increment_handle.join().unwrap();
+
+            decrement_handle.join().unwrap();
+
+            assert_eq!(counter.value(), 0);
+        });
+    }
+
+    #[test]
+    fn counter_does_not_overflow() {
+        loom::model(|| {
+            let counter = Counter::from(usize::MAX - 1);
+
+            run_on_threads(counter.clone(), |counter| {
+                repeat(100, &counter, |counter| counter.increment());
+            })
+            .join()
+            .unwrap();
+
+            assert_eq!(counter.value(), usize::MAX);
+        });
     }
 }

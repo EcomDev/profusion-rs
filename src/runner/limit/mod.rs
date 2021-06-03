@@ -1,19 +1,117 @@
-use std::time::Duration;
+mod concurrency;
+mod gradual_concurrency;
+mod max_duration;
+mod max_operations;
+
+pub use self::{
+    concurrency::ConcurrencyLimiter,
+    gradual_concurrency::GradualConcurrencyLimiter,
+    max_duration::MaxDurationLimiter, max_operations::MaxOperationsLimiter,
+};
+
 use crate::RealtimeStatus;
+use std::io::{Error, ErrorKind, Result};
+use std::time::Duration;
+use tokio::time::sleep;
 
-pub trait LimiterBuilder {
-    type Item: Limiter + Clone;
+#[derive(Debug, Copy, Clone)]
+pub struct CompoundLimiter<L, R>(L, R);
 
-    fn build(&self) -> Self::Item;
+impl<L, R> CompoundLimiter<L, R>
+where
+    L: Limiter,
+    R: Limiter,
+{
+    fn new(left: L, right: R) -> Self {
+        Self(left, right)
+    }
 }
 
-pub trait Limiter {
-    fn apply<S: RealtimeStatus>(status: &S) -> Limit;
+impl<L, R> Limiter for CompoundLimiter<L, R>
+where
+    L: Limiter,
+    R: Limiter,
+{
+    fn apply<S: RealtimeStatus>(&self, status: &S) -> Limit {
+        match self.0.apply(status) {
+            Limit::None => self.1.apply(status),
+            limit => limit,
+        }
+    }
 }
 
-#[derive(Debug, PartialEq)]
+pub trait Limiter: Sized + Clone + Copy {
+    fn apply<S: RealtimeStatus>(&self, status: &S) -> Limit;
+
+    fn with<L: Limiter>(self, another: L) -> CompoundLimiter<Self, L> {
+        CompoundLimiter::new(self, another)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Limit {
     None,
     Wait(Duration),
-    Shutdown
+    Shutdown,
+}
+
+impl Limit {
+    pub async fn process(self) -> Result<()> {
+        match self {
+            Self::Wait(duration) => sleep(duration).await,
+            Self::Shutdown => return Err(Error::from(ErrorKind::Interrupted)),
+            Self::None => {}
+        };
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+
+    use super::{ErrorKind, Limit};
+    use std::time::{Duration, Instant};
+
+    #[tokio::test]
+
+    async fn delays_for_specified_duration_when_is_wait_limit() {
+        let limit = Limit::Wait(Duration::from_millis(5));
+
+        let start = Instant::now();
+
+        limit.process().await.unwrap();
+
+        let elapsed = start.elapsed();
+
+        assert!(
+            elapsed >= Duration::from_millis(5)
+                && elapsed < Duration::from_millis(7)
+        );
+    }
+
+    #[tokio::test]
+
+    async fn terminates_process_execution_by_returning_error() {
+        let limit = Limit::Shutdown;
+
+        let result = limit.process().await.unwrap_err();
+
+        assert_eq!(result.kind(), ErrorKind::Interrupted)
+    }
+
+    #[tokio::test]
+
+    async fn imidiatelly_continues_execution_when_no_limit_is_set() {
+        let limit = Limit::None;
+
+        let start = Instant::now();
+
+        limit.process().await.unwrap();
+
+        let elapsed = start.elapsed();
+
+        assert!(elapsed < Duration::from_millis(1));
+    }
 }

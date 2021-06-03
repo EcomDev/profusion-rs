@@ -1,5 +1,4 @@
 use super::EventProcessor;
-
 use std::time::Instant;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -17,8 +16,13 @@ pub(super) struct Event<'a> {
     kind: EventType,
 }
 
-impl<'a> Event <'a> {
-    fn new(name: &'a str, started_at: Instant, finished_at: Instant, kind: EventType) -> Self {
+impl<'a> Event<'a> {
+    fn new(
+        name: &'a str,
+        started_at: Instant,
+        finished_at: Instant,
+        kind: EventType,
+    ) -> Self {
         Self {
             name,
             started_at,
@@ -27,17 +31,23 @@ impl<'a> Event <'a> {
         }
     }
 
-    pub(super) fn processor<P: EventProcessor<'a>>(&self, processor: &mut P) {
+    pub(super) fn process<P: EventProcessor<'a>>(&self, processor: &mut P) {
         match self.kind {
-            EventType::Success => {
-                processor.process_success(self.name, self.started_at, self.finished_at)
-            }
-            EventType::Timeout => {
-                processor.process_timeout(self.name, self.started_at, self.finished_at)
-            }
-            EventType::Error => {
-                processor.process_error(self.name, self.started_at, self.finished_at)
-            }
+            EventType::Success => processor.process_success(
+                self.name,
+                self.started_at,
+                self.finished_at,
+            ),
+            EventType::Timeout => processor.process_timeout(
+                self.name,
+                self.started_at,
+                self.finished_at,
+            ),
+            EventType::Error => processor.process_error(
+                self.name,
+                self.started_at,
+                self.finished_at,
+            ),
         }
     }
 }
@@ -55,7 +65,9 @@ impl<'a> From<(&'a str, Instant, Instant, EventType)> for Event<'a> {
 }
 
 #[cfg(test)]
+
 mod tests {
+
     use super::*;
     use crate::FakeProcessor;
     use std::time::{Duration, Instant};
@@ -75,8 +87,10 @@ mod tests {
     }
 
     #[test]
+
     fn it_calculates_latency_from_instant_difference() {
         let start = Instant::now();
+
         let event = Event::new(
             "something",
             start,
@@ -88,6 +102,7 @@ mod tests {
     }
 
     #[test]
+
     fn it_reports_multiple_event_types_into_record() {
         let time = Instant::now();
 
@@ -121,7 +136,7 @@ mod tests {
 
         events
             .iter()
-            .for_each(|event| event.processor(&mut aggregate));
+            .for_each(|event| event.process(&mut aggregate));
 
         aggregate.verify(vec![
             ("success:event1", Duration::from_millis(40)),

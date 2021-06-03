@@ -5,36 +5,38 @@ use std::time::{Duration, Instant};
 pub struct RealtimeStatusStub {
     connections: usize,
     operations: usize,
-    total_operations: usize
+    total_operations: usize,
 }
 
-impl RealtimeStatusStub {
-    pub(crate) fn new() -> Self {
+impl Default for RealtimeStatusStub {
+    fn default() -> Self {
         Self {
             connections: 0,
             operations: 0,
-            total_operations: 0
+            total_operations: 0,
         }
     }
+}
 
-    pub(crate) fn with_connections(value: usize) -> Self {
+impl RealtimeStatusStub {
+    pub fn with_connections(value: usize) -> Self {
         Self {
             connections: value,
-            ..Self::new()
+            ..Self::default()
         }
     }
 
-    pub(crate) fn with_operations(value: usize) -> Self {
+    pub fn with_operations(value: usize) -> Self {
         Self {
             operations: value,
-            ..Self::new()
+            ..Self::default()
         }
     }
 
-    pub(crate) fn with_total(value: usize) -> Self {
+    pub fn with_total(value: usize) -> Self {
         Self {
             total_operations: value,
-            ..Self::new()
+            ..Self::default()
         }
     }
 }

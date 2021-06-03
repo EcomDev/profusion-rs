@@ -1,11 +1,9 @@
-use std::future::Future;
-use std::io::{Error, ErrorKind, Result};
-
-use std::time::{Duration, Instant};
-use tokio::time::timeout;
-
 use super::*;
 use crate::report::RealtimeReporter;
+use std::future::Future;
+use std::io::{Error, ErrorKind, Result};
+use std::time::{Duration, Instant};
+use tokio::time::timeout;
 
 pub(crate) const DEFAULT_RUN_CODE: &str = "default";
 
@@ -16,7 +14,7 @@ pub struct Runner<'a, R> {
     reporter: R,
 }
 
-impl <R: Clone> Clone for Runner<'_, R> {
+impl<R: Clone> Clone for Runner<'_, R> {
     fn clone(&self) -> Self {
         Self::new(
             self.timeout.clone(),
@@ -36,8 +34,7 @@ impl<R> Runner<'_, R> {
     }
 }
 
-impl<'a, R: RealtimeReporter + Default> Runner<'a, R> {
-
+impl<'a, R: RealtimeReporter> Runner<'a, R> {
     pub(crate) async fn init<T, TFut>(
         &mut self,
         name: &'a str,
@@ -52,11 +49,14 @@ impl<'a, R: RealtimeReporter + Default> Runner<'a, R> {
         match activity().await {
             Ok(init) => {
                 self.events.push((name, start, Instant::now()).into());
+
                 Ok(init)
             }
             Err(error) => {
-                self.events
-                    .push((name, start, Instant::now(), EventType::Error).into());
+                self.events.push(
+                    (name, start, Instant::now(), EventType::Error).into(),
+                );
+
                 Err(error)
             }
         }
@@ -81,16 +81,21 @@ impl<'a, R: RealtimeReporter + Default> Runner<'a, R> {
         let result = match timeout(self.timeout, activity(state)).await {
             Ok(result) => {
                 match &result {
-                    Ok(_) => self.events.push((name, start, Instant::now()).into()),
-                    Err(_) => self
-                        .events
-                        .push((name, start, Instant::now(), EventType::Error).into()),
+                    Ok(_) => {
+                        self.events.push((name, start, Instant::now()).into())
+                    }
+                    Err(_) => self.events.push(
+                        (name, start, Instant::now(), EventType::Error).into(),
+                    ),
                 };
+
                 result
             }
             Err(_) => {
-                self.events
-                    .push((name, start, Instant::now(), EventType::Timeout).into());
+                self.events.push(
+                    (name, start, Instant::now(), EventType::Timeout).into(),
+                );
+
                 Err(Error::from(ErrorKind::TimedOut))
             }
         };
@@ -98,7 +103,7 @@ impl<'a, R: RealtimeReporter + Default> Runner<'a, R> {
         if name == DEFAULT_RUN_CODE {
             self.reporter.operation_finished();
         }
-        
+
         result
     }
 
@@ -106,21 +111,28 @@ impl<'a, R: RealtimeReporter + Default> Runner<'a, R> {
         target.events.append(self.events.as_mut())
     }
 
-    pub(crate) fn process<P: EventProcessor<'a>>(&mut self, process: &mut P) {
+    pub(crate) fn process<P: EventProcessor<'a>>(&mut self, processor: &mut P) {
         self.events
             .drain(..)
-            .for_each(|event| event.processor(process));
+            .for_each(|event| event.process(processor));
     }
 }
 
 #[cfg(test)]
+
 mod tests {
-    use super::*;
+    use super::{
+        Duration, Error, ErrorKind, EventType, Result, Runner, DEFAULT_RUN_CODE,
+    };
     use crate::{FakeProcessor, RealtimeReport, RealtimeStatus};
     use tokio::time::sleep;
 
     fn create_runner<'a>() -> Runner<'a, RealtimeReport> {
-        return Runner::new(Duration::from_secs(3600), 5, RealtimeReport::default());
+        return Runner::new(
+            Duration::from_secs(3600),
+            5,
+            RealtimeReport::default(),
+        );
     }
 
     async fn add_one(value: usize) -> Result<usize> {
@@ -133,16 +145,19 @@ mod tests {
 
     async fn add_one_and_wait_10ms(value: usize) -> Result<usize> {
         tokio::time::sleep(Duration::from_millis(10)).await;
+
         add_one(value).await
     }
 
     async fn init_value() -> Result<usize> {
         sleep(Duration::from_millis(4)).await;
+
         Ok(4)
     }
 
     async fn failed_init_value() -> Result<usize> {
         sleep(Duration::from_millis(4)).await;
+
         Err(Error::from(ErrorKind::InvalidData))
     }
 
@@ -157,18 +172,16 @@ mod tests {
     async fn records_time_spend_on_on_each_call() {
         let mut runner = create_runner();
 
-        runner.run("one", add_one_and_wait_10ms, 123).await.unwrap();
-        runner.run("two", add_one_and_wait_10ms, 123).await.unwrap();
-        runner
-            .run("three", add_one_and_wait_10ms, 123)
-            .await
-            .unwrap();
+        runner.run("1", add_one_and_wait_10ms, 123).await.unwrap();
+        runner.run("2", add_one_and_wait_10ms, 123).await.unwrap();
+        runner.run("3", add_one_and_wait_10ms, 123).await.unwrap();
 
         assert_eq!(
             runner
                 .events
                 .iter()
-                .map(|event| event.latency().as_millis() >= 10 && event.latency().as_millis() <= 12)
+                .map(|event| event.latency().as_millis() >= 10
+                    && event.latency().as_millis() <= 12)
                 .collect::<Vec<_>>(),
             vec![true, true, true]
         )
@@ -176,7 +189,8 @@ mod tests {
 
     #[tokio::test]
     async fn returns_timeout_error_when_task_is_too_long() {
-        let mut runner = Runner::new(Duration::from_millis(5), 1, RealtimeReport::default());
+        let mut runner =
+            Runner::new(Duration::from_millis(5), 1, RealtimeReport::default());
 
         assert_eq!(
             format!(
@@ -192,7 +206,8 @@ mod tests {
 
     #[tokio::test]
     async fn timeouts_task_when_it_takes_too_long() {
-        let mut runner = Runner::new(Duration::from_millis(5), 1, RealtimeReport::default());
+        let mut runner =
+            Runner::new(Duration::from_millis(5), 1, RealtimeReport::default());
 
         runner
             .run("too_long", add_one_and_wait_10ms, 123)
@@ -214,15 +229,15 @@ mod tests {
         let mut runner = create_runner();
 
         runner
-            .run("error_one", fail_operation, 123)
+            .run("error_1", fail_operation, 123)
             .await
             .unwrap_err();
         runner
-            .run("error_two", fail_operation, 123)
+            .run("error_2", fail_operation, 123)
             .await
             .unwrap_err();
         runner
-            .run("error_three", fail_operation, 123)
+            .run("error_3", fail_operation, 123)
             .await
             .unwrap_err();
 
@@ -244,6 +259,7 @@ mod tests {
         let value = runner_one.run("task_one", add_one, 1).await.unwrap();
         let value = runner_two.run("task_two", add_one, value).await.unwrap();
         let value = runner_one.run("task_three", add_one, value).await.unwrap();
+
         runner_two.run("task_four", add_one, value).await.unwrap();
         runner_two.append_to(&mut runner_one);
 
@@ -260,14 +276,12 @@ mod tests {
     #[tokio::test]
     async fn reports_internal_events_to_a_recorder() {
         let mut runner = create_runner();
-
         let mut aggregate = FakeProcessor::new();
 
         runner.run("event1", add_one, 1).await.unwrap();
         runner.run("event2", add_one, 1).await.unwrap();
         runner.run("event3", add_one, 1).await.unwrap();
         runner.run("event4", add_one, 1).await.unwrap();
-
         runner.process(&mut aggregate);
 
         aggregate.verify_names(vec![
@@ -288,7 +302,6 @@ mod tests {
         runner.run("event2", add_one, 1).await.unwrap();
         runner.run("event3", add_one, 1).await.unwrap();
         runner.run("event4", add_one, 1).await.unwrap();
-
         runner.process(&mut processor);
 
         assert_eq!((runner.events.len(), runner.events.capacity()), (0, 5));
@@ -297,14 +310,16 @@ mod tests {
     #[tokio::test]
     async fn increments_at_realtime_number_of_running_operations() {
         let runner = create_runner();
-
         let reporter = runner.reporter.clone();
 
         for n in 0..5 {
             let mut local_runner = runner.clone();
-            tokio::spawn(
-                async move { local_runner.run(DEFAULT_RUN_CODE, add_one_and_wait_10ms, n).await },
-            );
+
+            tokio::spawn(async move {
+                local_runner
+                    .run(DEFAULT_RUN_CODE, add_one_and_wait_10ms, n)
+                    .await
+            });
         }
 
         sleep(Duration::from_millis(5)).await;
@@ -320,9 +335,12 @@ mod tests {
 
         for n in 0..5 {
             let mut thread_runner = runner.clone();
-            tokio::spawn(
-                async move { thread_runner.run(DEFAULT_RUN_CODE, add_one_and_wait_10ms, n).await },
-            );
+
+            tokio::spawn(async move {
+                thread_runner
+                    .run(DEFAULT_RUN_CODE, add_one_and_wait_10ms, n)
+                    .await
+            });
         }
 
         sleep(Duration::from_millis(20)).await;
@@ -333,14 +351,14 @@ mod tests {
     #[tokio::test]
     async fn does_not_increment_reporter_when_non_default_run() {
         let runner = create_runner();
-
         let reporter = runner.reporter.clone();
 
         for n in 0..5 {
             let mut local_runner = runner.clone();
-            tokio::spawn(
-                async move { local_runner.run("non_default", add_one, n).await },
-            );
+
+            tokio::spawn(async move {
+                local_runner.run("non_default", add_one, n).await
+            });
         }
 
         sleep(Duration::from_millis(3)).await;
@@ -374,7 +392,8 @@ mod tests {
             runner
                 .events
                 .iter()
-                .map(|event| event.latency().as_millis() >= 4 && event.latency().as_millis() <= 6)
+                .map(|event| event.latency().as_millis() >= 4
+                    && event.latency().as_millis() <= 6)
                 .collect::<Vec<_>>(),
             vec![true, true, true]
         )
@@ -391,7 +410,10 @@ mod tests {
         let mut processor = FakeProcessor::new();
 
         runner.process(&mut processor);
-
-        processor.verify_names(vec!["success:one", "success:two", "error:three"]);
+        processor.verify_names(vec![
+            "success:one",
+            "success:two",
+            "error:three",
+        ]);
     }
 }
