@@ -2,7 +2,6 @@ use super::{RealtimeReporter, RealtimeStatus};
 use crate::{Arc, AtomicUsize, Ordering};
 
 #[derive(Debug)]
-
 struct Counter(Arc<AtomicUsize>);
 
 impl Default for Counter {
@@ -63,7 +62,6 @@ impl Default for RealtimeReport {
 impl RealtimeReporter for RealtimeReport {
     fn operation_started(&self) {
         self.operations.increment();
-
         self.total_operations.increment();
     }
 

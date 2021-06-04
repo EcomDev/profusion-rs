@@ -1,14 +1,50 @@
+//! Tools to process load test results and recieve realtime information 
+//! on its current status.
+
 mod realtime;
+mod event;
+
+/// A type of event result during load test operation execution.
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum EventType {
+    /// A successfully finished operation.
+    /// 
+    /// When operation succesfully finish, 
+    /// client/connection stays open and ready to execute the next operation by scheduler.
+    Success,
+    /// An operation that failed with an I/O error.
+    /// 
+    /// When operation fails with error client/connection is considered corrupted, 
+    /// so it is closed to prevent un-expected test interactions.
+    Error,
+    /// An operation that failed by exceeding predefined timeout.
+    /// 
+    /// When operation timeouts executor is going to cancel the scheduled operation
+    /// and close the underlying client/connection.
+    Timeout,
+}
+
+/// An `Event` type to represent the result of executing 
+/// a single operation during load test.
+#[derive(Debug)]
+pub struct Event {
+    name: &'static str,
+    started_at: Instant,
+    finished_at: Instant,
+    kind: EventType,
+}
 
 pub(crate) use realtime::RealtimeReport;
-use std::time::Instant;
 
-pub(crate) trait EventProcessor<'a> {
-    fn process_success(&mut self, name: &'a str, start: Instant, end: Instant);
+use crate::time::Instant;
 
-    fn process_error(&mut self, name: &'a str, start: Instant, end: Instant);
+/// Processor event 
+pub(crate) trait EventProcessor {
+    fn process_success(&mut self, name: &'static str, start: Instant, end: Instant);
 
-    fn process_timeout(&mut self, name: &'a str, start: Instant, end: Instant);
+    fn process_error(&mut self, name: &'static str, start: Instant, end: Instant);
+
+    fn process_timeout(&mut self, name: &'static str, start: Instant, end: Instant);
 }
 
 /// Reporter used in client context

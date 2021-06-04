@@ -1,11 +1,9 @@
 mod concurrency;
-mod gradual_concurrency;
 mod max_duration;
 mod max_operations;
 
 pub use self::{
     concurrency::ConcurrencyLimiter,
-    gradual_concurrency::GradualConcurrencyLimiter,
     max_duration::MaxDurationLimiter, max_operations::MaxOperationsLimiter,
 };
 
@@ -46,6 +44,7 @@ pub trait Limiter: Sized + Clone + Copy {
     fn with<L: Limiter>(self, another: L) -> CompoundLimiter<Self, L> {
         CompoundLimiter::new(self, another)
     }
+
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -75,7 +74,6 @@ mod tests {
     use std::time::{Duration, Instant};
 
     #[tokio::test]
-
     async fn delays_for_specified_duration_when_is_wait_limit() {
         let limit = Limit::Wait(Duration::from_millis(5));
 
@@ -86,13 +84,11 @@ mod tests {
         let elapsed = start.elapsed();
 
         assert!(
-            elapsed >= Duration::from_millis(5)
-                && elapsed < Duration::from_millis(7)
+            elapsed >= Duration::from_millis(5) && elapsed < Duration::from_millis(7)
         );
     }
 
     #[tokio::test]
-
     async fn terminates_process_execution_by_returning_error() {
         let limit = Limit::Shutdown;
 
@@ -102,7 +98,6 @@ mod tests {
     }
 
     #[tokio::test]
-
     async fn imidiatelly_continues_execution_when_no_limit_is_set() {
         let limit = Limit::None;
 

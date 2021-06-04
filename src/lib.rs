@@ -1,19 +1,27 @@
 #[warn(missing_debug_implementations, missing_docs, unreachable_pub)]
-mod report;
-mod runner;
+pub mod report;
+mod step;
+mod time;
+mod executor;
 mod sync;
 
 pub(crate) use sync::{Arc, AtomicUsize, Ordering};
 
 #[cfg(any(test, feature = "test"))]
-mod test_objects;
-
-#[cfg(any(test, feature = "test"))]
-pub use test_objects::{FakeProcessor, RealtimeStatusStub};
+pub mod test_objects;
 
 pub(crate) use report::{EventProcessor, RealtimeReport};
-pub use report::{RealtimeReporter, RealtimeStatus};
-pub use runner::{
-    ConcurrencyLimiter, EventType, Limit, Limiter, MaxDurationLimiter,
-    MaxOperationsLimiter, Runner,
+
+pub use report::{
+    RealtimeReporter, RealtimeStatus, Event, EventType
+};
+
+pub use executor::{
+    ConcurrencyLimiter, Limit, Limiter, MaxDurationLimiter,
+    MaxOperationsLimiter
+};
+
+pub use time::{
+    Duration,
+    Instant
 };

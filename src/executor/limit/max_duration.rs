@@ -35,7 +35,7 @@ impl Limiter for MaxDurationLimiter {
 
 #[cfg(test)]
 mod tests {
-    use crate::RealtimeStatusStub;
+    use crate::test_objects::RealtimeStatusStub;
 
     use super::{Duration, Limit, Limiter, MaxDurationLimiter};
 
@@ -52,10 +52,7 @@ mod tests {
 
         limit.start -= Duration::from_secs(40);
 
-        assert_eq!(
-            limit.apply(&RealtimeStatusStub::default()),
-            Limit::Shutdown
-        );
+        assert_eq!(limit.apply(&RealtimeStatusStub::default()), Limit::Shutdown);
     }
 
     #[test]

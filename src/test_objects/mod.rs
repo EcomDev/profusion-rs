@@ -85,7 +85,7 @@ impl FakeProcessor {
     }
 }
 
-impl EventProcessor<'_> for FakeProcessor {
+impl EventProcessor for FakeProcessor {
     fn process_success(&mut self, name: &str, start: Instant, end: Instant) {
         self.items.push((format!("success:{}", name), end - start));
     }
