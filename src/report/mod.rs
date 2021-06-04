@@ -47,25 +47,40 @@ pub(crate) trait EventProcessor {
     fn process_timeout(&mut self, name: &'static str, start: Instant, end: Instant);
 }
 
-/// Reporter used in client context
+/// Notification trait for implementing dispatcher of current load test progress.
+/// 
+/// Receiver of notifications must be as light weight as possible, otherwise it will introduce bottlenecks into the load test and scew your results.
+/// 
+/// Here is a simple example of notifier trait implementation that outputs 
+/// a message every time something happens
+/// # Example
+/// ```rust
+/// use profusion::report::RealtimeReporter;
 ///
-/// Each operation and new connection is invoking appropriate methods on
-/// implementor to notify it of start and finish of the related activity.
+/// struct ReportLogger;
+/// 
+/// impl RealtimeReporter for ReportLogger {
+///     fn operation_started(&self) { println!("started operation"); }
+///     fn operation_finished(&self) { println!("finished operation"); }
+///     fn connection_created(&self) { println!("created connection"); }
+///     fn connection_closed(&self) { println!("closed connection"); }
+/// }
+/// ```
 pub trait RealtimeReporter {
-    /// Callled when operation has been started
+    /// Invoked when load test starts new operation iteration.
     fn operation_started(&self) {}
 
-    /// Callled when operation has been finished
+    /// Invoked when load test finished or fails to complete operation iteration.
     fn operation_finished(&self) {}
 
-    /// Callled when connection has been started
-    fn connection_started(&self) {}
+    /// Invoked when load test creates a new client/connection.
+    fn connection_created(&self) {}
 
-    /// Callled when connection has been finished
-    fn connection_finished(&self) {}
+    /// Invoked when load test closes a new client/connection.
+    fn connection_closed(&self) {}
 }
 
-/// Realtime status of the load test
+/// Realtime status of the load test.
 ///
 /// Provides data for limiters to be able to throttle load test
 /// as well as terminate it early

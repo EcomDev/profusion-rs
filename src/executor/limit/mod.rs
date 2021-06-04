@@ -1,3 +1,5 @@
+//! Collections of limiters for executor.
+
 mod concurrency;
 mod max_duration;
 mod max_operations;

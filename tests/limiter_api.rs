@@ -1,4 +1,8 @@
-use profusion::{ConcurrencyLimiter, Limit, Limiter, RealtimeStatus};
+use profusion::{
+    executor::limit::{ConcurrencyLimiter, Limit, Limiter},
+    report::RealtimeStatus
+};
+
 use std::time::Duration;
 
 #[derive(Debug, Clone, Copy)]
@@ -26,7 +30,7 @@ impl LimiterStub {
 }
 
 impl Limiter for LimiterStub {
-    fn apply<S: profusion::RealtimeStatus>(&self, _status: &S) -> Limit {
+    fn apply<S: RealtimeStatus>(&self, _status: &S) -> Limit {
         self.0
     }
 }

@@ -69,11 +69,11 @@ impl RealtimeReporter for RealtimeReport {
         self.operations.decrement();
     }
 
-    fn connection_started(&self) {
+    fn connection_created(&self) {
         self.connections.increment();
     }
 
-    fn connection_finished(&self) {
+    fn connection_closed(&self) {
         self.connections.decrement();
     }
 }
@@ -156,7 +156,7 @@ mod tests {
             let report = RealtimeReport::default();
 
             run_on_threads(report.clone(), |report| {
-                repeat(99, &report, |report| report.connection_started());
+                repeat(99, &report, |report| report.connection_created());
             })
             .join()
             .unwrap();
@@ -171,9 +171,9 @@ mod tests {
             let report = RealtimeReport::default();
 
             run_on_threads(report.clone(), |report| {
-                repeat(99, &report, |report| report.connection_started());
+                repeat(99, &report, |report| report.connection_created());
 
-                repeat(80, &report, |report| report.connection_finished());
+                repeat(80, &report, |report| report.connection_closed());
             })
             .join()
             .unwrap();

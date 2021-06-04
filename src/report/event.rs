@@ -1,6 +1,5 @@
 use super::{EventProcessor, Event, EventType};
-use crate::{Duration, Instant};
-use crate::time::instant_eq_with_delta;
+use crate::time::{Duration, Instant, cmp_instant_with_delta};
 
 static EVENT_DELTA: Duration = Duration::from_millis(1);
 
@@ -22,7 +21,7 @@ impl Event {
     /// Creates a success event
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, Instant};
+    /// use profusion::{Event, EventType, time::Instant};
     /// 
     /// let event = Event::success("default", Instant::now(), Instant::now());
     /// assert_eq!(event.kind(), EventType::Success);
@@ -34,7 +33,7 @@ impl Event {
     /// Creates an error event
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, Instant};
+    /// use profusion::{Event, EventType, time::Instant};
     /// 
     /// let (start, end) = (Instant::now(), Instant::now());
     /// let event = Event::error("default", start, end);
@@ -47,7 +46,7 @@ impl Event {
     /// Creates a timeout event
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, Instant};
+    /// use profusion::{Event, EventType, time::Instant};
     /// 
     /// let event = Event::error("default", Instant::now(), Instant::now());
     /// assert_eq!(event.kind(), EventType::Error);
@@ -73,7 +72,7 @@ impl Event {
     /// Calculates latency based on event time span
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, Instant, Duration};
+    /// use profusion::{Event, EventType, time::Instant, time::Duration};
     /// 
     /// let start = Instant::now();
     /// let end = start + Duration::from_secs(1); 
@@ -88,7 +87,7 @@ impl Event {
     /// Type of the event that was captured
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, Instant};
+    /// use profusion::{Event, EventType, time::Instant};
     ///
     /// let event = Event::error("default", Instant::now(), Instant::now());
     /// assert_eq!(event.kind(), EventType::Error);
@@ -100,7 +99,7 @@ impl Event {
     /// Returns event name
     /// 
     /// ```rust
-    /// use profusion::{Event, Instant};
+    /// use profusion::{Event, time::Instant};
     ///
     /// let (start, end) = (Instant::now(), Instant::now());
     /// let event = Event::success("custom_event_name", start, end);
@@ -114,7 +113,7 @@ impl Event {
 /// Creates successfull event from tuple of name and two `Instant` objects
 /// 
 /// ```rust
-/// use profusion::{Event, EventType, Instant};
+/// use profusion::{Event, EventType, time::Instant};
 /// 
 /// let event = Event::from(("custom_event_name", Instant::now(), Instant::now()));
 /// assert_eq!(event.kind(), EventType::Success)
@@ -128,7 +127,7 @@ impl From<(&'static str, Instant, Instant)> for Event {
 /// Creates successfull event from tuple of name, start time and duration
 /// 
 /// ```rust
-/// use profusion::{Event, Instant, Duration};
+/// use profusion::{Event, time::Instant, time::Duration};
 /// 
 /// let event = Event::from(("custom_event_name", Instant::now(), Duration::from_millis(100)));
 /// assert_eq!(event.latency(), Duration::from_millis(100))
@@ -142,7 +141,7 @@ impl From<(&'static str, Instant, Duration)> for Event {
 /// Creates event based on IO error
 /// 
 /// ```rust
-/// use profusion::{Event, EventType, Instant};
+/// use profusion::{Event, EventType, time::Instant};
 /// use std::io::{Error, ErrorKind};
 /// 
 /// let event_timeout = Event::from(("timeout_event", Instant::now(), Instant::now(), Error::from(ErrorKind::TimedOut)));
@@ -168,7 +167,7 @@ impl From<(&'static str, Instant, Instant, std::io::Error)> for Event {
 ///
 /// # Example
 /// ```
-/// # use profusion::{Instant, Duration, Event};
+/// # use profusion::{Event, time::Instant, time::Duration};
 ///
 /// let first_time = Instant::now();
 /// let first_with_below_ms = first_time + Duration::from_micros(999);
@@ -181,8 +180,8 @@ impl From<(&'static str, Instant, Instant, std::io::Error)> for Event {
 impl PartialEq for Event {
     fn eq(&self, other: &Self) -> bool {
         self.name.eq(other.name)
-            && instant_eq_with_delta(&self.started_at, &other.started_at, &EVENT_DELTA)
-            && instant_eq_with_delta(&self.finished_at, &other.finished_at, &EVENT_DELTA)
+            && cmp_instant_with_delta(&self.started_at, &other.started_at, &EVENT_DELTA)
+            && cmp_instant_with_delta(&self.finished_at, &other.finished_at, &EVENT_DELTA)
             && self.kind.eq(&other.kind)
     }
 }

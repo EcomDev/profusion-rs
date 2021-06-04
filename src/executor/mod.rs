@@ -1,6 +1,2 @@
-mod limit;
-
-pub use limit::{
-    CompoundLimiter, ConcurrencyLimiter, Limit, Limiter,
-    MaxDurationLimiter, MaxOperationsLimiter,
-};
+//! Load test executor 
+pub mod limit;
