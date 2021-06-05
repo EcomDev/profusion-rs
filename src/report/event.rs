@@ -1,7 +1,7 @@
 use super::{EventProcessor, Event, EventType};
 use crate::time::{Duration, Instant, cmp_instant_with_delta};
 
-static EVENT_DELTA: Duration = Duration::from_millis(1);
+static EVENT_DELTA: Duration = Duration::from_millis(2);
 
 impl Event {
     fn new(
@@ -21,7 +21,7 @@ impl Event {
     /// Creates a success event
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, time::Instant};
+    /// use profusion::{report::Event, report::EventType, time::Instant};
     /// 
     /// let event = Event::success("default", Instant::now(), Instant::now());
     /// assert_eq!(event.kind(), EventType::Success);
@@ -33,7 +33,7 @@ impl Event {
     /// Creates an error event
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, time::Instant};
+    /// use profusion::{report::Event, report::EventType, time::Instant};
     /// 
     /// let (start, end) = (Instant::now(), Instant::now());
     /// let event = Event::error("default", start, end);
@@ -46,7 +46,7 @@ impl Event {
     /// Creates a timeout event
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, time::Instant};
+    /// use profusion::{report::Event, report::EventType, time::Instant};
     /// 
     /// let event = Event::error("default", Instant::now(), Instant::now());
     /// assert_eq!(event.kind(), EventType::Error);
@@ -72,7 +72,7 @@ impl Event {
     /// Calculates latency based on event time span
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, time::Instant, time::Duration};
+    /// use profusion::{report::Event, report::EventType, time::Instant, time::Duration};
     /// 
     /// let start = Instant::now();
     /// let end = start + Duration::from_secs(1); 
@@ -87,7 +87,7 @@ impl Event {
     /// Type of the event that was captured
     /// 
     /// ```rust
-    /// use profusion::{Event, EventType, time::Instant};
+    /// use profusion::{report::Event, report::EventType, time::Instant};
     ///
     /// let event = Event::error("default", Instant::now(), Instant::now());
     /// assert_eq!(event.kind(), EventType::Error);
@@ -113,7 +113,7 @@ impl Event {
 /// Creates successfull event from tuple of name and two `Instant` objects
 /// 
 /// ```rust
-/// use profusion::{Event, EventType, time::Instant};
+/// use profusion::{report::Event, report::EventType, time::Instant};
 /// 
 /// let event = Event::from(("custom_event_name", Instant::now(), Instant::now()));
 /// assert_eq!(event.kind(), EventType::Success)
@@ -127,7 +127,7 @@ impl From<(&'static str, Instant, Instant)> for Event {
 /// Creates successfull event from tuple of name, start time and duration
 /// 
 /// ```rust
-/// use profusion::{Event, time::Instant, time::Duration};
+/// use profusion::{report::Event, time::Instant, time::Duration};
 /// 
 /// let event = Event::from(("custom_event_name", Instant::now(), Duration::from_millis(100)));
 /// assert_eq!(event.latency(), Duration::from_millis(100))
@@ -141,17 +141,17 @@ impl From<(&'static str, Instant, Duration)> for Event {
 /// Creates event based on IO error
 /// 
 /// ```rust
-/// use profusion::{Event, EventType, time::Instant};
+/// use profusion::{report::Event, report::EventType, time::Instant};
 /// use std::io::{Error, ErrorKind};
 /// 
-/// let event_timeout = Event::from(("timeout_event", Instant::now(), Instant::now(), Error::from(ErrorKind::TimedOut)));
-/// let event_error = Event::from(("error_event", Instant::now(), Instant::now(), Error::from(ErrorKind::AddrInUse)));
+/// let event_timeout = Event::from(("timeout_event", Instant::now(), Instant::now(), &Error::from(ErrorKind::TimedOut)));
+/// let event_error = Event::from(("error_event", Instant::now(), Instant::now(), &Error::from(ErrorKind::AddrInUse)));
 ///
 /// assert_eq!(event_timeout.kind(), EventType::Timeout);
 /// assert_eq!(event_error.kind(), EventType::Error);
 /// ```
-impl From<(&'static str, Instant, Instant, std::io::Error)> for Event {
-    fn from(value: (&'static str, Instant, Instant, std::io::Error)) -> Self {
+impl From<(&'static str, Instant, Instant, &std::io::Error)> for Event {
+    fn from(value: (&'static str, Instant, Instant, &std::io::Error)) -> Self {
         let kind = match value.3.kind() {
             std::io::ErrorKind::TimedOut => EventType::Timeout,
             _ => EventType::Error
@@ -167,7 +167,7 @@ impl From<(&'static str, Instant, Instant, std::io::Error)> for Event {
 ///
 /// # Example
 /// ```
-/// # use profusion::{Event, time::Instant, time::Duration};
+/// # use profusion::{report::Event, time::Instant, time::Duration};
 ///
 /// let first_time = Instant::now();
 /// let first_with_below_ms = first_time + Duration::from_micros(999);
@@ -186,6 +186,9 @@ impl PartialEq for Event {
     }
 }
 
+impl Eq for Event {
+
+}
 
 #[cfg(test)]
 mod tests {
@@ -241,7 +244,7 @@ mod tests {
     }
 
     #[test]
-    fn events_are_not_equal_when_start_time_drift_is_more_then_1ms() {
+    fn events_are_not_equal_when_start_time_drift_is_more_then_delta() {
         let (start, end) = create_time_pair(None);
 
         assert_ne!(
@@ -251,7 +254,7 @@ mod tests {
     }
 
     #[test]
-    fn events_are_not_equal_when_finish_time_drift_is_more_then_1ms() {
+    fn events_are_not_equal_when_finish_time_drift_is_more_then_delta() {
         let (start, end) = create_time_pair(None);
 
         assert_ne!(

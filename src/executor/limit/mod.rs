@@ -72,6 +72,8 @@ impl Limit {
 
 mod tests {
 
+    use crate::time::cmp_instant_with_delta;
+
     use super::{ErrorKind, Limit};
     use std::time::{Duration, Instant};
 
@@ -83,10 +85,10 @@ mod tests {
 
         limit.process().await.unwrap();
 
-        let elapsed = start.elapsed();
+        let end = Instant::now();
 
         assert!(
-            elapsed >= Duration::from_millis(5) && elapsed < Duration::from_millis(7)
+            cmp_instant_with_delta(&start, &end, &Duration::from_millis(7))
         );
     }
 

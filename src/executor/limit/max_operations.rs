@@ -22,7 +22,6 @@ impl Limiter for MaxOperationsLimiter {
 
 #[cfg(test)]
 mod tests {
-
     use super::{Limit, Limiter, MaxOperationsLimiter};
     use crate::test_objects::RealtimeStatusStub;
 

@@ -1,0 +1,11 @@
+#!/bin/bash
+mkdir -p coverage
+rm -rf coverage/*
+rm -rf target/debug
+export RUSTFLAGS="-Zinstrument-coverage -Copt-level=0 -Clink-dead-code -Coverflow-checks=off " LLVM_PROFILE_FILE="coverage-%p-%m.profraw"
+cargo build --test
+cargo test --lib
+cargo test --doc
+cargo test --test "*"
+grcov . --source-dir ./src --binary-path ./target/debug/ -t lcov --ignore "/*" --ignore-not-existing -o ./coverage/profusion.lcov
+rm -rf *.prof*
