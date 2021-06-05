@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use crate::executor::limit::{Limit, Limiter};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct MaxDurationLimiter {
     start: Instant,
     max_duration: Duration,

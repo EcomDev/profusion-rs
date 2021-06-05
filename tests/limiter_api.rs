@@ -1,6 +1,6 @@
 use profusion::{
     executor::limit::{ConcurrencyLimiter, Limit, Limiter},
-    report::RealtimeStatus
+    report::RealtimeStatus,
 };
 
 use std::time::Duration;

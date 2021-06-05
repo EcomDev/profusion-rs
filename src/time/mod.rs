@@ -3,17 +3,17 @@
 mod instant;
 
 #[doc(hidden)]
-pub use std::time::{Instant, Duration};
+pub use std::time::{Duration, Instant};
 
 use std::cmp::Ordering;
 
 /// Extents [Instant][`std::time::Instant`] with [as_duration_bucket][`DurationBucket::as_duration_bucket`] method.
 pub trait DurationBucket {
     /// Returns a bucket for the duration based on [bucket_size][`std::time::Duration`]
-    /// 
-    /// Invaluable functionality to aggregate events by specific [Duration][`std::time::Duration`] as time span. 
+    ///
+    /// Invaluable functionality to aggregate events by specific [Duration][`std::time::Duration`] as time span.
     /// When moment of [Instant][`std::time::Instant`] is in excatly in between time spans it moves it to a higher a level time span.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use profusion::time::DurationBucket;
@@ -27,12 +27,12 @@ pub trait DurationBucket {
     ///    start_time + Duration::from_secs(19), // +19s
     ///    start_time + Duration::from_secs(23) // +23s
     /// ];
-    /// 
+    ///
     /// assert_eq!(
     ///     spans
     ///        .into_iter()
     ///        .map(|time| time.as_duration_bucket(&start_time, &Duration::from_secs(10)))
-    ///        .collect::<Vec<_>>(), 
+    ///        .collect::<Vec<_>>(),
     ///     vec![
     ///         Duration::from_secs(0),   // 2s ~> 0s bucket
     ///         Duration::from_secs(10),  // 5s ~> 10s bucket
@@ -46,24 +46,24 @@ pub trait DurationBucket {
 }
 
 /// Compares two [Instant][`std::time::Instant`] instances with [delta][`std::time::Duration`] offset to allow time drift.
-/// 
+///
 /// # Example
 /// ```
 /// use profusion::time::cmp_instant_with_delta;
 /// use std::time::Instant;
 /// use std::time::Duration;
-/// 
+///
 /// assert!(
 ///    cmp_instant_with_delta(
 ///        &Instant::now(),
-///        &Instant::now(), 
+///        &Instant::now(),
 ///        &Duration::from_micros(10)
 ///    )
 /// );
 /// assert!(
 ///    !cmp_instant_with_delta(
 ///        &Instant::now(),
-///        &(Instant::now() + Duration::from_millis(11)), 
+///        &(Instant::now() + Duration::from_millis(11)),
 ///        &Duration::from_millis(10)
 ///    )
 /// )

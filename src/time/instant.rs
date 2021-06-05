@@ -1,4 +1,4 @@
-use super::{Instant, DurationBucket, Duration};
+use super::{Duration, DurationBucket, Instant};
 
 impl DurationBucket for Instant {
     fn as_duration_bucket(&self, origin: &Instant, bucket_size: &Duration) -> Duration {
@@ -6,11 +6,14 @@ impl DurationBucket for Instant {
         let bucket_nanos = bucket_size.as_nanos() as u64;
         let buckets = latency_nanos / bucket_nanos;
         let remainder = latency_nanos % bucket_nanos;
-        
-        Duration::from_nanos(buckets * bucket_nanos + match remainder.cmp(&(bucket_nanos / 2)) {
-            std::cmp::Ordering::Less => 0,
-            _ => bucket_nanos
-        })
+
+        Duration::from_nanos(
+            buckets * bucket_nanos
+                + match remainder.cmp(&(bucket_nanos / 2)) {
+                    std::cmp::Ordering::Less => 0,
+                    _ => bucket_nanos,
+                },
+        )
     }
 }
 
@@ -63,11 +66,16 @@ mod tests {
 
         assert_eq!(
             vec![
-                (time + Duration::from_micros(1499)).as_duration_bucket(&time, &MILLISECOND),
-                (time + Duration::from_micros(1500)).as_duration_bucket(&time, &MILLISECOND),
-                (time + Duration::from_micros(1999)).as_duration_bucket(&time, &MILLISECOND),
-                (time + Duration::from_micros(2499)).as_duration_bucket(&time, &MILLISECOND),
-                (time + Duration::from_micros(2560)).as_duration_bucket(&time, &MILLISECOND),
+                (time + Duration::from_micros(1499))
+                    .as_duration_bucket(&time, &MILLISECOND),
+                (time + Duration::from_micros(1500))
+                    .as_duration_bucket(&time, &MILLISECOND),
+                (time + Duration::from_micros(1999))
+                    .as_duration_bucket(&time, &MILLISECOND),
+                (time + Duration::from_micros(2499))
+                    .as_duration_bucket(&time, &MILLISECOND),
+                (time + Duration::from_micros(2560))
+                    .as_duration_bucket(&time, &MILLISECOND),
             ],
             vec![
                 Duration::from_millis(1),
@@ -85,11 +93,16 @@ mod tests {
         let two_seconds: Duration = SECOND * 2;
         assert_eq!(
             vec![
-                (time + Duration::from_millis(999)).as_duration_bucket(&time, &two_seconds),
-                (time + Duration::from_millis(1000)).as_duration_bucket(&time, &two_seconds),
-                (time + Duration::from_millis(2999)).as_duration_bucket(&time, &two_seconds),
-                (time + Duration::from_millis(3000)).as_duration_bucket(&time, &two_seconds),
-                (time + Duration::from_millis(7199)).as_duration_bucket(&time, &two_seconds),
+                (time + Duration::from_millis(999))
+                    .as_duration_bucket(&time, &two_seconds),
+                (time + Duration::from_millis(1000))
+                    .as_duration_bucket(&time, &two_seconds),
+                (time + Duration::from_millis(2999))
+                    .as_duration_bucket(&time, &two_seconds),
+                (time + Duration::from_millis(3000))
+                    .as_duration_bucket(&time, &two_seconds),
+                (time + Duration::from_millis(7199))
+                    .as_duration_bucket(&time, &two_seconds),
             ],
             vec![
                 Duration::from_secs(0),
@@ -98,6 +111,6 @@ mod tests {
                 Duration::from_secs(4),
                 Duration::from_secs(8),
             ]
-        );       
+        );
     }
 }

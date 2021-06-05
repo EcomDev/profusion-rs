@@ -12,5 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `executor::limit::MaxDurationLimiter` limiter that terminates load test after specified duration.
 - `executor::limit::MaxOperationsLimiter` limiter that terminates load test after specified number of operations finished.
 - `executor::limit::ConcurrencyLimiter` limiter that throttles operations when too concurrent operations reach limit.
+- `executor::MeasuredFuture` for capturing execution events of the async tasks. 
 
 [Unreleased]: https://github.com/EcomDev/profusion-rs/compare/3077010...HEAD

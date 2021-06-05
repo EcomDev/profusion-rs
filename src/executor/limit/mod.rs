@@ -5,8 +5,8 @@ mod max_duration;
 mod max_operations;
 
 pub use self::{
-    concurrency::ConcurrencyLimiter,
-    max_duration::MaxDurationLimiter, max_operations::MaxOperationsLimiter,
+    concurrency::ConcurrencyLimiter, max_duration::MaxDurationLimiter,
+    max_operations::MaxOperationsLimiter,
 };
 
 use crate::RealtimeStatus;
@@ -14,7 +14,7 @@ use std::io::{Error, ErrorKind, Result};
 use std::time::Duration;
 use tokio::time::sleep;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct CompoundLimiter<L, R>(L, R);
 
 impl<L, R> CompoundLimiter<L, R>
@@ -40,13 +40,12 @@ where
     }
 }
 
-pub trait Limiter: Sized + Clone + Copy {
+pub trait Limiter: Sized {
     fn apply<S: RealtimeStatus>(&self, status: &S) -> Limit;
 
     fn with<L: Limiter>(self, another: L) -> CompoundLimiter<Self, L> {
         CompoundLimiter::new(self, another)
     }
-
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -71,9 +70,6 @@ impl Limit {
 #[cfg(test)]
 
 mod tests {
-
-    use crate::time::cmp_instant_with_delta;
-
     use super::{ErrorKind, Limit};
     use std::time::{Duration, Instant};
 
@@ -85,11 +81,9 @@ mod tests {
 
         limit.process().await.unwrap();
 
-        let end = Instant::now();
+        let spend_time = start.elapsed();
 
-        assert!(
-            cmp_instant_with_delta(&start, &end, &Duration::from_millis(7))
-        );
+        assert!(spend_time >= Duration::from_millis(5));
     }
 
     #[tokio::test]

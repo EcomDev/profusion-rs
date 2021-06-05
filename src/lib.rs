@@ -1,9 +1,8 @@
-#[warn(missing_debug_implementations, missing_docs, unreachable_pub)]
-pub mod report;
-mod step;
-pub mod time;
 pub mod executor;
+#[warn(missing_docs, unreachable_pub)]
+pub mod report;
 mod sync;
+pub mod time;
 
 pub(crate) use sync::{Arc, AtomicUsize, Ordering};
 
@@ -13,6 +12,4 @@ pub mod test_objects;
 pub(crate) use report::{EventProcessor, RealtimeReport};
 
 #[doc(hidden)]
-pub use report::{
-    RealtimeReporter, RealtimeStatus, Event, EventType
-};
+pub use report::{Event, EventType, RealtimeReporter, RealtimeStatus};

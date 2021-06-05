@@ -1,3 +1,7 @@
+//! Module that automatically chooses which sync structs to import
+//!
+//! Used to facilitate [loom][`loom::model`] model tests
+
 #[cfg(loom)]
 pub(crate) use loom::sync::atomic::AtomicUsize;
 

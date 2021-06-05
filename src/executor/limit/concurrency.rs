@@ -1,6 +1,6 @@
 use super::{Duration, Limit, Limiter};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct ConcurrencyLimiter {
     max_concurrency: usize,
     wait_for: Duration,

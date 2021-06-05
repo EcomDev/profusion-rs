@@ -1,30 +1,30 @@
-//! Tools to process load test results and recieve realtime information 
+//! Tools to process load test results and recieve realtime information
 //! on its current status.
 
-mod realtime;
 mod event;
+mod realtime;
 
 /// A type of event result during load test operation execution.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum EventType {
     /// A successfully finished operation.
-    /// 
-    /// When operation succesfully finish, 
+    ///
+    /// When operation succesfully finish,
     /// client/connection stays open and ready to execute the next operation by scheduler.
     Success,
     /// An operation that failed with an I/O error.
-    /// 
-    /// When operation fails with error client/connection is considered corrupted, 
+    ///
+    /// When operation fails with error client/connection is considered corrupted,
     /// so it is closed to prevent un-expected test interactions.
     Error,
     /// An operation that failed by exceeding predefined timeout.
-    /// 
+    ///
     /// When operation timeouts executor is going to cancel the scheduled operation
     /// and close the underlying client/connection.
     Timeout,
 }
 
-/// An `Event` type to represent the result of executing 
+/// An `Event` type to represent the result of executing
 /// a single operation during load test.
 #[derive(Debug)]
 pub struct Event {
@@ -38,7 +38,7 @@ pub(crate) use realtime::RealtimeReport;
 
 use crate::time::Instant;
 
-/// Processor event 
+/// Processor event
 pub(crate) trait EventProcessor {
     fn process_success(&mut self, name: &'static str, start: Instant, end: Instant);
 
@@ -48,17 +48,17 @@ pub(crate) trait EventProcessor {
 }
 
 /// Notification trait for implementing dispatcher of current load test progress.
-/// 
+///
 /// Receiver of notifications must be as light weight as possible, otherwise it will introduce bottlenecks into the load test and scew your results.
-/// 
-/// Here is a simple example of notifier trait implementation that outputs 
+///
+/// Here is a simple example of notifier trait implementation that outputs
 /// a message every time something happens
 /// # Example
 /// ```rust
 /// use profusion::report::RealtimeReporter;
 ///
 /// struct ReportLogger;
-/// 
+///
 /// impl RealtimeReporter for ReportLogger {
 ///     fn operation_started(&self) { println!("started operation"); }
 ///     fn operation_finished(&self) { println!("finished operation"); }

@@ -1,11 +1,16 @@
 #!/bin/bash
-mkdir -p coverage
-rm -rf coverage/*
-rm -rf target/debug
-export RUSTFLAGS="-Zinstrument-coverage -Copt-level=0 -Clink-dead-code -Coverflow-checks=off " LLVM_PROFILE_FILE="coverage-%p-%m.profraw"
-cargo build --test
+
+OUTPUT_DIR=$PWD/build
+
+rm -rf $OUTPUT_DIR
+mkdir -p $OUTPUT_DIR/coverage/html
+mkdir -p $OUTPUT_DIR/profiles
+
+export RUSTC_BOOTSTRAP=1 RUSTFLAGS="-Zinstrument-coverage -Copt-level=0 -Clink-dead-code"
+cargo build
+export LLVM_PROFILE_FILE="$OUTPUT_DIR/profiles/coverage-%p-%m.profraw"
 cargo test --lib
-cargo test --doc
 cargo test --test "*"
-grcov . --source-dir ./src --binary-path ./target/debug/ -t lcov --ignore "/*" --ignore-not-existing -o ./coverage/profusion.lcov
-rm -rf *.prof*
+cargo test --doc
+grcov $OUTPUT_DIR/profiles --source-dir . --binary-path ./target/debug/ -t lcov --ignore "/*" --ignore "*test*" --ignore-not-existing --llvm -o  $OUTPUT_DIR/coverage/lcov.info
+grcov $OUTPUT_DIR/profiles --source-dir . --binary-path ./target/debug/ -t html --ignore "/*" --ignore "*test*" --ignore-not-existing --llvm -o  $OUTPUT_DIR/coverage/html

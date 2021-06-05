@@ -1,6 +1,6 @@
 use super::{Limit, Limiter};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct MaxOperationsLimiter {
     max_operations: usize,
 }
