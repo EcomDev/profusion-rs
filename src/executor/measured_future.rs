@@ -2,6 +2,7 @@ use super::*;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Instant;
+use pin_project_lite::pin_project;
 
 #[derive(Debug)]
 enum MeasuredFutureState {
@@ -57,9 +58,14 @@ impl MeasuredFutureState {
 ///    );
 /// }
 /// ```
-pub struct MeasuredFuture<F> {
-    inner: Pin<Box<F>>,
-    state: MeasuredFutureState,
+
+
+pin_project! {
+    pub struct MeasuredFuture<F> {
+        #[pin]
+        inner: F,
+        state: MeasuredFutureState,
+    }
 }
 
 impl<T, F> MeasuredFuture<F>
@@ -72,7 +78,7 @@ where
 
     pub fn with_events(name: &'static str, inner: F, events: Vec<Event>) -> Self {
         Self {
-            inner: Box::pin(inner),
+            inner: inner,
             state: MeasuredFutureState::Ready(name, events),
         }
     }
@@ -86,19 +92,20 @@ where
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
-            let result = match &self.state {
+            let this = self.as_mut().project();
+            let result = match &this.state {
                 MeasuredFutureState::Ready(..) => {
-                    self.state.start_timer();
+                    this.state.start_timer();
                     continue;
                 }
-                MeasuredFutureState::Running(..) => self.inner.as_mut().poll(cx),
+                MeasuredFutureState::Running(..) => this.inner.poll(cx),
                 MeasuredFutureState::Complete => unreachable!(),
             };
 
             match result {
                 Poll::Pending => return Poll::Pending,
                 Poll::Ready(result) => {
-                    let events = self.state.finish_timer(&result);
+                    let events = this.state.finish_timer(&result);
                     return Poll::Ready((events, result));
                 }
             }
@@ -108,11 +115,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        io::{Error, ErrorKind},
-        time::Duration,
-        vec,
-    };
+    use std::io::ErrorKind;
 
     use super::*;
 
@@ -156,7 +159,7 @@ mod tests {
     #[tokio::test]
     async fn returns_event_based_on_underlying_future_execution() {
         let (events, _) =
-            MeasuredFuture::new("fast_future", Box::pin(async { Ok(1 + 1) })).await;
+            MeasuredFuture::new("fast_future", async { Ok(1 + 1) }).await;
 
         assert_eq!(
             events,
@@ -173,7 +176,7 @@ mod tests {
         let future = || async { Ok(1 + 1) };
         let (events, _) = MeasuredFuture::with_events(
             "fast_future",
-            Box::pin(future()),
+            future(),
             vec![Event::success(
                 "another_event",
                 Instant::now(),
@@ -195,7 +198,7 @@ mod tests {
     async fn propagates_io_error() {
         let (_, result) = MeasuredFuture::new(
             "fast_future",
-            Box::pin(async { Result::<u32>::Err(ErrorKind::InvalidInput.into()) }),
+            async { Result::<u32>::Err(ErrorKind::InvalidInput.into()) },
         )
         .await;
 
@@ -206,13 +209,13 @@ mod tests {
     async fn reports_error_events() {
         let (events, _) = MeasuredFuture::new(
             "timer_out",
-            Box::pin(async { Result::<u32>::Err(ErrorKind::TimedOut.into()) }),
+            async { Result::<u32>::Err(ErrorKind::TimedOut.into()) },
         )
         .await;
 
         let (events, _) = MeasuredFuture::with_events(
             "errored_out",
-            Box::pin(async { Result::<u32>::Err(ErrorKind::InvalidData.into()) }),
+            async { Result::<u32>::Err(ErrorKind::InvalidData.into()) },
             events,
         )
         .await;
