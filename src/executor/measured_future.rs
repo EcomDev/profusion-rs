@@ -64,8 +64,7 @@ pub struct MeasuredFuture<F> {
 
 impl<T, F> MeasuredFuture<F>
 where
-    F: Future<Output = Result<T>>,
-    T: Send + Unpin + 'static,
+    F: Future<Output = Result<T>>
 {
     pub fn new(name: &'static str, inner: F) -> Self {
         Self::with_events(name, inner, Vec::new())
@@ -81,8 +80,7 @@ where
 
 impl<T, F> Future for MeasuredFuture<F>
 where
-    F: Future<Output = Result<T>> + Send + Unpin,
-    T: Sized + Send + Unpin + 'static,
+    F: Future<Output = Result<T>>
 {
     type Output = (Vec<Event>, Result<T>);
 
@@ -172,9 +170,10 @@ mod tests {
 
     #[tokio::test]
     async fn appends_to_existings_events_after_execution() {
+        let future = || async { Ok(1 + 1) };
         let (events, _) = MeasuredFuture::with_events(
             "fast_future",
-            Box::pin(async { Ok(1 + 1) }),
+            Box::pin(future()),
             vec![Event::success(
                 "another_event",
                 Instant::now(),
