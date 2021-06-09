@@ -1,8 +1,10 @@
 use super::*;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::time::Instant;
 use pin_project_lite::pin_project;
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+    time::Instant,
+};
 
 #[derive(Debug)]
 enum MeasuredFutureState {
@@ -34,33 +36,31 @@ impl MeasuredFutureState {
     }
 }
 
-/// Measures execution time and result type of underlying [inner][`std::future::Future`] future.
-///
-/// Result of the measurement is as an [Event][`crate::report::Event`] appeneded to a vector passed as an argument.
-/// ```
-/// use profusion::{report::Event, executor::MeasuredFuture};
-/// use std::time::Instant;
-///
-/// #[tokio::main]
-/// async fn main() {
-///    let (events, _) = MeasuredFuture::with_events(
-///        "one_plus_one",
-///        Box::pin(async { Ok(1 + 1) }),
-///        vec![Event::success("another_event", Instant::now(), Instant::now())]
-///    ).await;
-///
-///    assert_eq!(
-///        events,
-///        vec![
-///            Event::success("another_event", Instant::now(), Instant::now()),
-///            Event::success("one_plus_one", Instant::now(), Instant::now())
-///       ]
-///    );
-/// }
-/// ```
-
-
 pin_project! {
+    /// Measures execution time and result type of underlying [inner][`std::future::Future`] future.
+    ///
+    /// Result of the measurement is as an [Event][`crate::report::Event`] appeneded to a vector passed as an argument.
+    /// ```
+    /// use profusion::{report::Event, executor::future::MeasuredFuture};
+    /// use std::time::Instant;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///    let (events, _) = MeasuredFuture::new(
+    ///        "one_plus_one",
+    ///        async { Ok(1 + 1) },
+    ///        vec![Event::success("another_event", Instant::now(), Instant::now())]
+    ///    ).await;
+    ///
+    ///    assert_eq!(
+    ///        events,
+    ///        vec![
+    ///            Event::success("another_event", Instant::now(), Instant::now()),
+    ///            Event::success("one_plus_one", Instant::now(), Instant::now())
+    ///       ]
+    ///    );
+    /// }
+    /// ```
     pub struct MeasuredFuture<F> {
         #[pin]
         inner: F,
@@ -70,13 +70,14 @@ pin_project! {
 
 impl<T, F> MeasuredFuture<F>
 where
-    F: Future<Output = Result<T>>
+    F: Future<Output = Result<T>>,
 {
-    pub fn new(name: &'static str, inner: F) -> Self {
-        Self::with_events(name, inner, Vec::new())
+    fn empty(name: &'static str, inner: F) -> Self {
+        Self::new(name, inner, Vec::new())
     }
 
-    pub fn with_events(name: &'static str, inner: F, events: Vec<Event>) -> Self {
+    /// Creates `MeasuredFuture` with provided vector of Events
+    pub fn new(name: &'static str, inner: F, events: Vec<Event>) -> Self {
         Self {
             inner: inner,
             state: MeasuredFutureState::Ready(name, events),
@@ -84,11 +85,12 @@ where
     }
 }
 
+#[must_use = "Futures must be awaited"]
 impl<T, F> Future for MeasuredFuture<F>
 where
-    F: Future<Output = Result<T>>
+    F: Future<Output = Result<T>>,
 {
-    type Output = (Vec<Event>, Result<T>);
+    type Output = MeasuredOutput<T>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
@@ -151,15 +153,14 @@ mod tests {
     #[tokio::test]
     async fn executes_underlying_future() {
         let (_, result) =
-            MeasuredFuture::new("fast_future", Box::pin(async { Ok(1 + 1) })).await;
+            MeasuredFuture::empty("fast_future", Box::pin(async { Ok(1 + 1) })).await;
 
         assert_eq!(result.unwrap(), 2);
     }
 
     #[tokio::test]
     async fn returns_event_based_on_underlying_future_execution() {
-        let (events, _) =
-            MeasuredFuture::new("fast_future", async { Ok(1 + 1) }).await;
+        let (events, _) = MeasuredFuture::empty("fast_future", async { Ok(1 + 1) }).await;
 
         assert_eq!(
             events,
@@ -174,7 +175,7 @@ mod tests {
     #[tokio::test]
     async fn appends_to_existings_events_after_execution() {
         let future = || async { Ok(1 + 1) };
-        let (events, _) = MeasuredFuture::with_events(
+        let (events, _) = MeasuredFuture::new(
             "fast_future",
             future(),
             vec![Event::success(
@@ -196,10 +197,9 @@ mod tests {
 
     #[tokio::test]
     async fn propagates_io_error() {
-        let (_, result) = MeasuredFuture::new(
-            "fast_future",
-            async { Result::<u32>::Err(ErrorKind::InvalidInput.into()) },
-        )
+        let (_, result) = MeasuredFuture::empty("fast_future", async {
+            Result::<u32>::Err(ErrorKind::InvalidInput.into())
+        })
         .await;
 
         assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidInput.into());
@@ -207,13 +207,12 @@ mod tests {
 
     #[tokio::test]
     async fn reports_error_events() {
-        let (events, _) = MeasuredFuture::new(
-            "timer_out",
-            async { Result::<u32>::Err(ErrorKind::TimedOut.into()) },
-        )
+        let (events, _) = MeasuredFuture::empty("timer_out", async {
+            Result::<u32>::Err(ErrorKind::TimedOut.into())
+        })
         .await;
 
-        let (events, _) = MeasuredFuture::with_events(
+        let (events, _) = MeasuredFuture::new(
             "errored_out",
             async { Result::<u32>::Err(ErrorKind::InvalidData.into()) },
             events,

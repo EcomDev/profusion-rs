@@ -10,8 +10,10 @@ pub use self::{
 };
 
 use crate::RealtimeStatus;
-use std::io::{Error, ErrorKind, Result};
-use std::time::Duration;
+use std::{
+    io::{Error, ErrorKind, Result},
+    time::Duration,
+};
 use tokio::time::sleep;
 
 #[derive(Copy, Clone)]

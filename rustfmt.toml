@@ -1,1 +1,4 @@
 max_width = 90
+format_strings = true
+indent_style = "Block"
+imports_granularity = "Crate"
