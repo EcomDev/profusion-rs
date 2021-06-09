@@ -5,9 +5,7 @@ pub(super) type MeasuredOutput<T> = (Vec<Event>, Result<T>);
 
 mod either;
 mod measured;
-mod noop;
 mod sequence;
 
-pub use either::EitherFuture;
+pub use either::{EitherFuture, EitherFutureKind};
 pub use measured::MeasuredFuture;
-pub use noop::NoopFuture;

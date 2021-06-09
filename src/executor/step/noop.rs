@@ -1,6 +1,10 @@
+use crate::Event;
+use crate::executor::future::MeasuredOutput;
+
 use super::{ExecutionStep, WeightedExecutionStep};
 
-use crate::executor::future::NoopFuture;
+use std::future::Ready;
+use std::future::ready;
 
 use std::marker::PhantomData;
 
@@ -18,22 +22,16 @@ impl<T> NoopStep<T> {
     }
 }
 
-impl<T: Unpin> ExecutionStep for NoopStep<T> {
+impl<T> ExecutionStep for NoopStep<T> {
     type Item = T;
 
-    type Output = NoopFuture<T>;
+    type Output = Ready<MeasuredOutput<T>>;
 
     fn execute(&self, events: Vec<crate::Event>, input: Self::Item) -> Self::Output {
-        NoopFuture::new(input, events)
+        ready((events, Ok(input)))
     }
 
     fn capacity(&self) -> usize {
-        0
-    }
-}
-
-impl<T: Unpin> WeightedExecutionStep for NoopStep<T> {
-    fn weight(&self) -> usize {
         0
     }
 }
@@ -77,10 +75,4 @@ mod tests {
         assert_eq!(step.capacity(), 0);
     }
 
-    #[test]
-    fn noop_step_has_zero_weight() {
-        let step = NoopStep::<usize>::new();
-
-        assert_eq!(step.weight(), 0);
-    }
 }
