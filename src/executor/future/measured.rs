@@ -72,10 +72,6 @@ impl<T, F> MeasuredFuture<F>
 where
     F: Future<Output = Result<T>>,
 {
-    fn empty(name: &'static str, inner: F) -> Self {
-        Self::new(name, inner, Vec::new())
-    }
-
     /// Creates `MeasuredFuture` with provided vector of Events
     pub fn new(name: &'static str, inner: F, events: Vec<Event>) -> Self {
         Self {
@@ -120,6 +116,15 @@ mod tests {
     use std::io::ErrorKind;
 
     use super::*;
+
+    impl<T, F> MeasuredFuture<F>
+    where
+        F: Future<Output = Result<T>>,
+    {
+        fn empty(name: &'static str, inner: F) -> Self {
+            Self::new(name, inner, Vec::new())
+        }
+    }
 
     #[test]
     fn transitions_into_running_state_on_starting_timer() {

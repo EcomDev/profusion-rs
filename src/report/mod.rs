@@ -3,6 +3,7 @@
 
 mod event;
 mod realtime;
+mod aggregate;
 
 /// A type of event result during load test operation execution.
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -33,8 +34,6 @@ pub struct Event {
     finished_at: Instant,
     kind: EventType,
 }
-
-pub(crate) use realtime::RealtimeReport;
 
 use crate::time::Instant;
 

@@ -9,3 +9,4 @@ mod sequence;
 
 pub use either::{EitherFuture, EitherFutureKind};
 pub use measured::MeasuredFuture;
+pub use sequence::SequenceFuture;

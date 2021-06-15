@@ -206,8 +206,6 @@ impl PartialEq for Event {
     }
 }
 
-impl Eq for Event {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

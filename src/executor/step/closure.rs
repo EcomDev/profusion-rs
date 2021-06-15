@@ -10,15 +10,16 @@ pub struct ClosureStep<T, F, Fut> {
     _future: PhantomData<Fut>,
 }
 
-impl <T, F, Fut> Clone for ClosureStep<T, F, Fut> 
-    where F: Clone
+impl<T, F, Fut> Clone for ClosureStep<T, F, Fut>
+where
+    F: Clone,
 {
     fn clone(&self) -> Self {
         Self {
             name: self.name,
             inner: self.inner.clone(),
             _type: PhantomData,
-            _future: PhantomData
+            _future: PhantomData,
         }
     }
 }

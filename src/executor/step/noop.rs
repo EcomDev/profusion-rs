@@ -1,16 +1,14 @@
-use crate::Event;
 use crate::executor::future::MeasuredOutput;
 
-use super::{ExecutionStep, WeightedExecutionStep};
+use super::ExecutionStep;
 
-use std::future::Ready;
-use std::future::ready;
+use std::future::{ready, Ready};
 
 use std::marker::PhantomData;
 
 pub struct NoopStep<T>(PhantomData<T>);
 
-impl <T> Clone for NoopStep<T> {
+impl<T> Clone for NoopStep<T> {
     fn clone(&self) -> Self {
         Self(PhantomData)
     }
@@ -74,5 +72,4 @@ mod tests {
 
         assert_eq!(step.capacity(), 0);
     }
-
 }

@@ -1,13 +1,14 @@
 use super::future::MeasuredOutput;
 use crate::report::Event;
-use std::future::Future;
+use std::{future::Future, io::Result};
 
 mod closure;
 mod noop;
-mod combined;
+mod sequence;
 
-pub use noop::NoopStep;
 pub use closure::ClosureStep;
+pub use noop::NoopStep;
+pub use sequence::SequenceStep;
 
 pub trait ExecutionStep: Clone {
     type Item;
@@ -18,21 +19,42 @@ pub trait ExecutionStep: Clone {
 
     /// Expected capacity of the execution step
     fn capacity(&self) -> usize;
-}
 
-pub trait WeightedExecutionStep: ExecutionStep {
-    /// Executes weighted step with target
-    fn execute_with_target(
-        &self,
-        _target: usize,
-        events: Vec<Event>,
-        input: Self::Item,
-    ) -> Self::Output {
-        self.execute(events, input)
-    }
-
-    /// Weight of the execution step
+    /// Chains with current step as first and passed one as second.
     ///
-    /// It is only used when test step is selected with another step
-    fn weight(&self) -> usize;
+    /// ```
+    /// use profusion::prelude::*;
+    /// use std::time::Instant;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let step = NoopStep::new()
+    ///         .step("first", |value| async move { Ok(value + 10) } )        
+    ///         .step("second", |value| async move { Ok(value + 10) } )        
+    ///         .step("third", |value| async move { Ok(value + 10) } )        
+    ///         .step("last", |value| async move { Ok(value + 2) } )        
+    ///     ;
+    ///     let data: usize = 10;
+    ///     let (events, result) = step.execute(Vec::with_capacity(step.capacity()), data).await;
+    ///
+    ///     assert_eq!(events, vec![
+    ///         Event::success("first", Instant::now(), Instant::now()),
+    ///         Event::success("second", Instant::now(), Instant::now()),
+    ///         Event::success("third", Instant::now(), Instant::now()),
+    ///         Event::success("last", Instant::now(), Instant::now()),
+    ///     ]);
+    ///     assert_eq!(result.unwrap(), 42)
+    /// }
+    /// ```
+    fn step<F, Fut>(
+        self,
+        name: &'static str,
+        closure: F,
+    ) -> SequenceStep<Self, ClosureStep<Self::Item, F, Fut>>
+    where
+        F: Fn(Self::Item) -> Fut + Clone,
+        Fut: Future<Output = Result<Self::Item>>,
+    {
+        SequenceStep::new(self, ClosureStep::new(name, closure))
+    }
 }

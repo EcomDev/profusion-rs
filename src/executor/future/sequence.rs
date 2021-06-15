@@ -1,21 +1,25 @@
-use std::future::Future;
-use std::io::Result;
-use std::pin::Pin;
-use std::task::Poll;
-use std::task::Context;
+use std::{
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use super::MeasuredOutput;
-use crate::Event;
-use crate::executor::step::ExecutionStep;
-use crate::executor::future::{EitherFuture, EitherFutureKind};
+use crate::{
+    executor::{
+        future::{EitherFuture, EitherFutureKind},
+        step::ExecutionStep,
+    },
+    Event,
+};
 
 use pin_project_lite::pin_project;
 
 pin_project! {
-    struct SequenceFuture <T, F, S> 
-    where 
+    pub struct SequenceFuture <T, F, S>
+    where
         F: ExecutionStep<Item=T>,
-        S: ExecutionStep<Item=T> 
+        S: ExecutionStep<Item=T>
     {
         args: Option<(Vec<Event>, T)>,
         first: F,
@@ -25,9 +29,10 @@ pin_project! {
     }
 }
 
-impl <T, F, S> SequenceFuture<T, F, S> 
-    where F: ExecutionStep<Item=T>,
-          S: ExecutionStep<Item=T>
+impl<T, F, S> SequenceFuture<T, F, S>
+where
+    F: ExecutionStep<Item = T>,
+    S: ExecutionStep<Item = T>,
 {
     pub fn new(events: Vec<Event>, value: T, first: F, second: S) -> Self {
         Self {
@@ -39,23 +44,22 @@ impl <T, F, S> SequenceFuture<T, F, S>
     }
 }
 
-impl <T, F, S> Future for  SequenceFuture<T, F, S> 
-    where F: ExecutionStep<Item=T>,
-          S: ExecutionStep<Item=T>
+impl<T, F, S> Future for SequenceFuture<T, F, S>
+where
+    F: ExecutionStep<Item = T>,
+    S: ExecutionStep<Item = T>,
 {
     type Output = MeasuredOutput<T>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        
         loop {
             let mut this = self.as_mut().project();
 
             match this.args.take() {
                 Some((events, value)) => {
-                    this.future.set(
-                        EitherFuture::left(this.first.execute(events, value))
-                    );
-                },
+                    this.future
+                        .set(EitherFuture::left(this.first.execute(events, value)));
+                }
                 None => {}
             };
 
@@ -63,23 +67,20 @@ impl <T, F, S> Future for  SequenceFuture<T, F, S>
 
             let result = match this.future.as_mut().poll(cx) {
                 Poll::Pending => return Poll::Pending,
-                Poll::Ready(result) => result
+                Poll::Ready(result) => result,
             };
 
             match (kind, result) {
                 (EitherFutureKind::Left, (events, Ok(value))) => {
-                    this.future.set(
-                        EitherFuture::right(this.second.execute(events, value))
-                    );
+                    this.future
+                        .set(EitherFuture::right(this.second.execute(events, value)));
                     continue;
-                },
+                }
                 (EitherFutureKind::Right, (events, Ok(value))) => {
                     return Poll::Ready((events, Ok(value)))
-                },
-                (_, (events, Err(error))) => {
-                    return Poll::Ready((events, Err(error)))
-                },
-                _ => unreachable!()
+                }
+                (_, (events, Err(error))) => return Poll::Ready((events, Err(error))),
+                _ => unreachable!(),
             }
         }
     }
@@ -97,11 +98,11 @@ mod tests {
         let step = SequenceFuture::new(
             Vec::new(),
             40,
-            ClosureStep::new("first_step", |value: usize| async move { Ok(value+2) }),
-            NoopStep::new()
+            ClosureStep::new("first_step", |value: usize| async move { Ok(value + 2) }),
+            NoopStep::new(),
         );
 
-        let (_, result) =  step.await;
+        let (_, result) = step.await;
 
         assert_eq!(result.unwrap(), 42)
     }
@@ -112,10 +113,10 @@ mod tests {
             Vec::new(),
             40,
             NoopStep::new(),
-            ClosureStep::new("second_step", |value: usize| async move { Ok(value+2) })
+            ClosureStep::new("second_step", |value: usize| async move { Ok(value + 2) }),
         );
 
-        let (_, result) =  step.await;
+        let (_, result) = step.await;
 
         assert_eq!(result.unwrap(), 42)
     }
@@ -125,16 +126,19 @@ mod tests {
         let step = SequenceFuture::new(
             Vec::new(),
             40,
-            ClosureStep::new("first_step", |value: usize| async move { Ok(value+2) }),
-            ClosureStep::new("second_step", |value: usize| async move { Ok(value+2) })
+            ClosureStep::new("first_step", |value: usize| async move { Ok(value + 2) }),
+            ClosureStep::new("second_step", |value: usize| async move { Ok(value + 2) }),
         );
 
-        let (events, _) =  step.await;
+        let (events, _) = step.await;
 
-        assert_eq!(events, vec![
-            Event::success("first_step", Instant::now(), Instant::now()),
-            Event::success("second_step", Instant::now(), Instant::now()),
-        ])
+        assert_eq!(
+            events,
+            vec![
+                Event::success("first_step", Instant::now(), Instant::now()),
+                Event::success("second_step", Instant::now(), Instant::now()),
+            ]
+        )
     }
 
     #[tokio::test]
@@ -142,15 +146,18 @@ mod tests {
         let step = SequenceFuture::new(
             Vec::new(),
             40,
-            ClosureStep::new("first_step", |_| async move { Err(ErrorKind::Interrupted.into()) }),
-            ClosureStep::new("second_step", |value: usize| async move { Ok(value+2) })
+            ClosureStep::new("first_step", |_| async move {
+                Err(ErrorKind::Interrupted.into())
+            }),
+            ClosureStep::new("second_step", |value: usize| async move { Ok(value + 2) }),
         );
 
-        let (events, _) =  step.await;
+        let (events, _) = step.await;
 
-        assert_eq!(events, vec![
-            Event::error("first_step", Instant::now(), Instant::now())
-        ])
+        assert_eq!(
+            events,
+            vec![Event::error("first_step", Instant::now(), Instant::now())]
+        )
     }
 
     #[tokio::test]
@@ -158,11 +165,13 @@ mod tests {
         let step = SequenceFuture::new(
             Vec::new(),
             40,
-            ClosureStep::new("first_step", |_| async move { Err(ErrorKind::ConnectionReset.into()) }),
-            ClosureStep::new("second_step", |value: usize| async move { Ok(value+2) })
+            ClosureStep::new("first_step", |value: usize| async move { Ok(value + 2) }),
+            ClosureStep::new("second_step", |_| async move {
+                Err(ErrorKind::ConnectionReset.into())
+            }),
         );
 
-        let (_, result) =  step.await;
+        let (_, result) = step.await;
 
         assert_eq!(result.unwrap_err().kind(), ErrorKind::ConnectionReset)
     }

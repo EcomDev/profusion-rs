@@ -5,7 +5,6 @@ use std::{
     pin::Pin,
     task::{Context, Poll},
 };
-use std::future::{ready, Ready};
 
 #[derive(Debug, PartialEq)]
 pub enum EitherFutureKind {
@@ -22,7 +21,7 @@ pin_project! {
     /// use profusion::executor::future::{EitherFuture, MeasuredFuture};
     /// use profusion::report::Event;
     /// use std::{future::Ready, io::Result};
-    /// 
+    ///
     /// #[tokio::main]
     /// async fn main() {
     ///     let future = EitherFuture::<Ready<(Vec<Event>, Result<usize>)>, _>::right(MeasuredFuture::new("right", async { Ok(2) }, Vec::new()));
@@ -68,7 +67,7 @@ where
         match self {
             Self::Left { .. } => EitherFutureKind::Left,
             Self::Right { .. } => EitherFutureKind::Right,
-            Self::Empty => EitherFutureKind::Empty
+            Self::Empty => EitherFutureKind::Empty,
         }
     }
 }
@@ -101,7 +100,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{io::ErrorKind, time::Instant};
+    use std::{
+        future::{ready, Ready},
+        io::ErrorKind,
+        time::Instant,
+    };
 
     #[tokio::test]
     async fn polls_assigned_futures() {
@@ -137,8 +140,10 @@ mod tests {
 
     #[tokio::test]
     async fn returns_invalid_data_error_when_empty() {
-        let empty: EitherFuture<Ready<MeasuredOutput<usize>>, Ready<MeasuredOutput<usize>>> =
-            EitherFuture::empty();
+        let empty: EitherFuture<
+            Ready<MeasuredOutput<usize>>,
+            Ready<MeasuredOutput<usize>>,
+        > = EitherFuture::empty();
 
         let (events, result) = empty.await;
 
@@ -151,37 +156,26 @@ mod tests {
     #[test]
     fn allows_to_detect_empty_future() {
         let empty: EitherFuture<
-            Ready<MeasuredOutput<usize>>, 
-            Ready<MeasuredOutput<usize>>
+            Ready<MeasuredOutput<usize>>,
+            Ready<MeasuredOutput<usize>>,
         > = EitherFuture::empty();
 
-        assert_eq!(
-            empty.kind(),
-            EitherFutureKind::Empty
-        );
+        assert_eq!(empty.kind(), EitherFutureKind::Empty);
     }
 
     #[test]
     fn allows_to_detect_left_future() {
-        let empty: EitherFuture<_, Ready<MeasuredOutput<usize>>> = EitherFuture::left(
-            ready((Vec::new(), Ok(1)))
-        );
+        let empty: EitherFuture<_, Ready<MeasuredOutput<usize>>> =
+            EitherFuture::left(ready((Vec::new(), Ok(1))));
 
-        assert_eq!(
-            empty.kind(),
-            EitherFutureKind::Left
-        );
+        assert_eq!(empty.kind(), EitherFutureKind::Left);
     }
 
     #[test]
     fn allows_to_detect_right_future() {
-        let empty: EitherFuture<Ready<MeasuredOutput<usize>>, _> = EitherFuture::right(
-            ready((Vec::new(), Ok(1)))
-        );
+        let empty: EitherFuture<Ready<MeasuredOutput<usize>>, _> =
+            EitherFuture::right(ready((Vec::new(), Ok(1))));
 
-        assert_eq!(
-            empty.kind(),
-            EitherFutureKind::Right
-        );
+        assert_eq!(empty.kind(), EitherFutureKind::Right);
     }
 }
