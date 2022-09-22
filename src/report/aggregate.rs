@@ -351,13 +351,13 @@ mod tests {
                 (*key, (value.min(), value.max(), value.value_at_percentile(95f64)))
         ).collect();
 
-        latencies.sort_by(|(keyLeft, _), (keyRight, _)| keyLeft.cmp(keyRight));
+        latencies.sort_by(|(left, _), (right, _)| left.cmp(right));
         latencies
     }
 
     fn sorted_events(aggregate: AggregateEventProcessor) -> Vec<(AggregateBucket, AggregateEvent)> {
         let mut events: Vec<(_, _)> = aggregate.events.into_iter().collect();
-        events.sort_by(|(bucketLeft, _), (bucketRight, _ )| bucketLeft.cmp(bucketRight));
+        events.sort_by(|(left, _), (right, _ )| left.cmp(right));
         events
     }
 
