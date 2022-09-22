@@ -5,6 +5,8 @@ mod event;
 mod realtime;
 mod aggregate;
 
+pub use aggregate::{AggregateBuilder, AggregateEvent, AggregateBucket, AggregateEventProcessor};
+
 /// A type of event result during load test operation execution.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum EventType {
@@ -38,12 +40,19 @@ pub struct Event {
 use crate::time::Instant;
 
 /// Processor event
-pub(crate) trait EventProcessor {
+pub trait EventProcessor {
     fn process_success(&mut self, name: &'static str, start: Instant, end: Instant);
 
     fn process_error(&mut self, name: &'static str, start: Instant, end: Instant);
 
     fn process_timeout(&mut self, name: &'static str, start: Instant, end: Instant);
+
+    fn merge(&mut self, other: Self);
+}
+
+pub trait EventProcessorBuilder<T: EventProcessor>
+{
+    fn build(&self) -> T;
 }
 
 /// Notification trait for implementing dispatcher of current load test progress.

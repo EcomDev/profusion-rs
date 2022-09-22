@@ -98,7 +98,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn imidiatelly_continues_execution_when_no_limit_is_set() {
+    async fn immediately_continues_execution_when_no_limit_is_set() {
         let limit = Limit::None;
 
         let start = Instant::now();

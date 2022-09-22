@@ -54,8 +54,8 @@ impl Event {
     /// ```rust
     /// use profusion::{report::Event, report::EventType, time::Instant};
     ///
-    /// let event = Event::error("default", Instant::now(), Instant::now());
-    /// assert_eq!(event.kind(), EventType::Error);
+    /// let event = Event::timeout("default", Instant::now(), Instant::now());
+    /// assert_eq!(event.kind(), EventType::Timeout);
     /// ```
     pub fn timeout(
         name: &'static str,
@@ -120,7 +120,7 @@ impl Event {
     }
 }
 
-/// Creates successfull event from tuple of name and two `Instant` objects
+/// Creates successful event from tuple of name and two `Instant` objects
 ///
 /// ```rust
 /// use profusion::{report::Event, report::EventType, time::Instant};
@@ -134,7 +134,7 @@ impl From<(&'static str, Instant, Instant)> for Event {
     }
 }
 
-/// Creates successfull event from tuple of name, start time and duration
+/// Creates successful event from tuple of name, start time and duration
 ///
 /// ```rust
 /// use profusion::{report::Event, time::Instant, time::Duration};

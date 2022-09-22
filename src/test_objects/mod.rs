@@ -97,4 +97,8 @@ impl EventProcessor for FakeProcessor {
     fn process_timeout(&mut self, name: &str, start: Instant, end: Instant) {
         self.items.push((format!("timeout:{}", name), end - start));
     }
+
+    fn merge(&mut self, mut other: Self) {
+        self.items.append(&mut other.items);
+    }
 }

@@ -72,7 +72,6 @@ where
     }
 }
 
-#[must_use = "Futures must be awaited"]
 impl<T, L, R> Future for EitherFuture<L, R>
 where
     L: Future<Output = MeasuredOutput<T>>,

@@ -18,6 +18,8 @@ hdrhistogram = "7"
 [dev-dependencies]
 loom = "0.5"
 tokio = { version = "1", features = ["full"] }
+itertools = "0.10.3"
+criterion = "0.3"
 
 [features]
 test = []
@@ -30,3 +32,7 @@ lto = true
 opt-level = 0
 codegen-units = 1
 lto = false
+
+[[bench]]
+name = "aggregator_benchmark"
+harness = false
