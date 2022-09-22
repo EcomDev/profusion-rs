@@ -8,14 +8,14 @@ use std::collections::hash_map::{Entry, Iter};
 use crate::report::{EventProcessor, EventProcessorBuilder};
 use crate::time::DurationBucket;
 
-pub struct AggregateBuilder {
+pub struct AggregateEventProcessorBuilder {
     span: Duration,
     time_reference: Instant,
     max_latency: Duration
 }
 
 #[derive(Debug, PartialEq, Eq, Default)]
-pub struct AggregateEvent {
+pub struct AggregateEntry {
     started: usize,
     success: usize,
     timeout: usize,
@@ -50,7 +50,7 @@ impl Ord for AggregateBucket {
     }
 }
 
-impl AggregateEvent {
+impl AggregateEntry {
     pub fn new(started: usize, success: usize, timeout: usize, error: usize) -> Self {
         Self {
             started,
@@ -95,16 +95,16 @@ impl AggregateBucket {
 
 pub struct AggregateEventProcessor {
     latencies: HashMap<&'static str, Histogram<u64>>,
-    events: HashMap<AggregateBucket, AggregateEvent>,
+    timeline: HashMap<AggregateBucket, AggregateEntry>,
     span: Duration,
     time_reference: Instant,
     max_latency: u64
 }
 
 impl AggregateEventProcessor {
-    pub fn events(&self) -> Iter<'_, AggregateBucket, AggregateEvent>
+    pub fn timeline(&self) -> Iter<'_, AggregateBucket, AggregateEntry>
     {
-        self.events.iter()
+        self.timeline.iter()
     }
 
     pub fn latencies(&self) -> Iter<'_, &'static str, Histogram<u64>>
@@ -120,8 +120,8 @@ impl AggregateEventProcessor {
         latency_histogram.record(duration.as_micros() as u64).unwrap();
     }
 
-    fn find_event_by_instant(&mut self, name: &'static str, time: &Instant) -> &mut AggregateEvent {
-        self.events
+    fn find_event_by_instant(&mut self, name: &'static str, time: &Instant) -> &mut AggregateEntry {
+        self.timeline
             .entry(
                 AggregateBucket::new(
                         name,
@@ -152,8 +152,8 @@ impl EventProcessor for AggregateEventProcessor {
     }
 
     fn merge(&mut self, other: Self) {
-        other.events.into_iter().for_each(|(key, value)| {
-            self.events.entry(key).or_default().merge(value);
+        other.timeline.into_iter().for_each(|(key, value)| {
+            self.timeline.entry(key).or_default().merge(value);
         });
         other.latencies.into_iter().for_each(|(key, value)| {
             match self.latencies.entry(key) {
@@ -168,7 +168,7 @@ impl EventProcessor for AggregateEventProcessor {
     }
 }
 
-impl Default for AggregateBuilder {
+impl Default for AggregateEventProcessorBuilder {
     fn default() -> Self {
         Self {
             span: Duration::from_millis(50),
@@ -178,7 +178,7 @@ impl Default for AggregateBuilder {
     }
 }
 
-impl AggregateBuilder
+impl AggregateEventProcessorBuilder
 {
     pub fn new() -> Self {
         Self::default()
@@ -197,12 +197,12 @@ impl AggregateBuilder
     }
 }
 
-impl EventProcessorBuilder<AggregateEventProcessor> for AggregateBuilder {
+impl EventProcessorBuilder<AggregateEventProcessor> for AggregateEventProcessorBuilder {
     fn build(&self) -> AggregateEventProcessor
     {
         AggregateEventProcessor {
             latencies: HashMap::new(),
-            events: HashMap::new(),
+            timeline: HashMap::new(),
             span: self.span,
             time_reference: self.time_reference,
             max_latency: self.max_latency.as_millis() as u64
@@ -232,11 +232,11 @@ mod tests {
 
     #[test]
     fn returns_list_of_empty_events() {
-        let aggregate = AggregateBuilder::new()
+        let aggregate = AggregateEventProcessorBuilder::new()
             .build();
 
         assert_eq!(
-            aggregate.events().collect::<Vec<_>>(),
+            aggregate.timeline().collect::<Vec<_>>(),
             vec![]
         )
     }
@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn aggregates_events_by_default_time_span() {
         let reference = Instant::now();
-        let mut aggregate = AggregateBuilder::new()
+        let mut aggregate = AggregateEventProcessorBuilder::new()
             .with_time(reference)
             .build();
 
@@ -254,13 +254,13 @@ mod tests {
         itertools::assert_equal(
             sorted_events(aggregate),
             vec![
-                (AggregateBucket::create("user1", 0), AggregateEvent::new(1, 0, 0, 0)),
-                (AggregateBucket::create("user1", 50), AggregateEvent::new(1, 0, 0, 2)),
-                (AggregateBucket::create("user1", 100), AggregateEvent::new(1, 1, 0, 0)),
-                (AggregateBucket::create("user1", 150), AggregateEvent::new(1, 0, 0, 0)),
-                (AggregateBucket::create("user1", 200), AggregateEvent::new(0, 0, 0, 1)),
-                (AggregateBucket::create("user2", 250), AggregateEvent::new(2, 0, 0, 0)),
-                (AggregateBucket::create("user2", 300), AggregateEvent::new(0, 0, 1, 1)),
+                (AggregateBucket::create("user1", 0), AggregateEntry::new(1, 0, 0, 0)),
+                (AggregateBucket::create("user1", 50), AggregateEntry::new(1, 0, 0, 2)),
+                (AggregateBucket::create("user1", 100), AggregateEntry::new(1, 1, 0, 0)),
+                (AggregateBucket::create("user1", 150), AggregateEntry::new(1, 0, 0, 0)),
+                (AggregateBucket::create("user1", 200), AggregateEntry::new(0, 0, 0, 1)),
+                (AggregateBucket::create("user2", 250), AggregateEntry::new(2, 0, 0, 0)),
+                (AggregateBucket::create("user2", 300), AggregateEntry::new(0, 0, 1, 1)),
             ]
         );
     }
@@ -268,7 +268,7 @@ mod tests {
     #[test]
     fn aggregates_events_by_custom_time_span() {
         let reference = Instant::now();
-        let mut aggregate = AggregateBuilder::new()
+        let mut aggregate = AggregateEventProcessorBuilder::new()
             .with_time(reference)
             .with_span(Duration::from_millis(100))
             .build();
@@ -279,10 +279,10 @@ mod tests {
         itertools::assert_equal(
             sorted_events(aggregate),
             vec![
-                (AggregateBucket::create("user1", 0), AggregateEvent::new(2, 0, 0, 1)),
-                (AggregateBucket::create("user1", 100), AggregateEvent::new(1, 1, 0, 1)),
-                (AggregateBucket::create("user1", 200), AggregateEvent::new(1, 0, 0, 1)),
-                (AggregateBucket::create("user2", 300), AggregateEvent::new(2, 0, 1, 1)),
+                (AggregateBucket::create("user1", 0), AggregateEntry::new(2, 0, 0, 1)),
+                (AggregateBucket::create("user1", 100), AggregateEntry::new(1, 1, 0, 1)),
+                (AggregateBucket::create("user1", 200), AggregateEntry::new(1, 0, 0, 1)),
+                (AggregateBucket::create("user2", 300), AggregateEntry::new(2, 0, 1, 1)),
             ]
         );
     }
@@ -290,7 +290,7 @@ mod tests {
     #[test]
     fn aggregates_latencies_from_all_events_for_each_user() {
         let reference = Instant::now();
-        let mut aggregate = AggregateBuilder::new()
+        let mut aggregate = AggregateEventProcessorBuilder::new()
             .with_time(reference)
             .build();
 
@@ -308,7 +308,7 @@ mod tests {
     #[test]
     fn merges_aggregates() {
         let reference = Instant::now();
-        let builder = AggregateBuilder::new()
+        let builder = AggregateEventProcessorBuilder::new()
             .with_time(reference)
             .with_span(Duration::from_millis(100));
 
@@ -337,10 +337,10 @@ mod tests {
         itertools::assert_equal(
             sorted_events(root_aggregate),
             vec![
-                (AggregateBucket::create("user1", 0), AggregateEvent::new(6, 0, 0, 3)),
-                (AggregateBucket::create("user1", 100), AggregateEvent::new(3, 3, 0, 3)),
-                (AggregateBucket::create("user1", 200), AggregateEvent::new(3, 0, 0, 3)),
-                (AggregateBucket::create("user2", 300), AggregateEvent::new(6, 0, 3, 3)),
+                (AggregateBucket::create("user1", 0), AggregateEntry::new(6, 0, 0, 3)),
+                (AggregateBucket::create("user1", 100), AggregateEntry::new(3, 3, 0, 3)),
+                (AggregateBucket::create("user1", 200), AggregateEntry::new(3, 0, 0, 3)),
+                (AggregateBucket::create("user2", 300), AggregateEntry::new(6, 0, 3, 3)),
             ]
         );
     }
@@ -355,8 +355,8 @@ mod tests {
         latencies
     }
 
-    fn sorted_events(aggregate: AggregateEventProcessor) -> Vec<(AggregateBucket, AggregateEvent)> {
-        let mut events: Vec<(_, _)> = aggregate.events.into_iter().collect();
+    fn sorted_events(aggregate: AggregateEventProcessor) -> Vec<(AggregateBucket, AggregateEntry)> {
+        let mut events: Vec<(_, _)> = aggregate.timeline.into_iter().collect();
         events.sort_by(|(left, _), (right, _ )| left.cmp(right));
         events
     }

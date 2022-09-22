@@ -5,7 +5,7 @@ mod event;
 mod realtime;
 mod aggregate;
 
-pub use aggregate::{AggregateBuilder, AggregateEvent, AggregateBucket, AggregateEventProcessor};
+pub use aggregate::{AggregateEventProcessorBuilder, AggregateEntry, AggregateBucket, AggregateEventProcessor};
 
 /// A type of event result during load test operation execution.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
