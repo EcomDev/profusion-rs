@@ -107,10 +107,10 @@ mod tests {
         value: T,
         operation: fn(T) -> (),
     ) -> JoinHandle<()> {
-        spawn(move || operation(value.clone()))
+        spawn(move || operation(value))
     }
 
-    fn repeat<T>(times: usize, value: &T, operation: fn(&T) -> ()) -> () {
+    fn repeat<T>(times: usize, value: &T, operation: fn(&T) -> ()) {
         for _ in 0..times {
             operation(value);
 

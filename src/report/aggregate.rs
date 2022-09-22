@@ -14,7 +14,7 @@ pub struct AggregateBuilder {
     max_latency: Duration
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct AggregateEvent {
     started: usize,
     success: usize,

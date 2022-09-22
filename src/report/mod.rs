@@ -8,7 +8,7 @@ mod aggregate;
 pub use aggregate::{AggregateBuilder, AggregateEvent, AggregateBucket, AggregateEventProcessor};
 
 /// A type of event result during load test operation execution.
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum EventType {
     /// A successfully finished operation.
     ///

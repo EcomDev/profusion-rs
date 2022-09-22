@@ -306,27 +306,27 @@ mod tests {
         let events = [
             Event::success(
                 "event1",
-                time.clone(),
-                time.clone() + Duration::from_millis(40),
+                time,
+                time + Duration::from_millis(40),
             ),
             Event::error(
                 "event2",
-                time.clone() + Duration::from_millis(10),
-                time.clone() + Duration::from_millis(20),
+                time + Duration::from_millis(10),
+                time + Duration::from_millis(20),
             ),
             Event::success(
                 "event3",
-                time.clone() + Duration::from_millis(10),
-                time.clone() + Duration::from_millis(30),
+                time + Duration::from_millis(10),
+                time + Duration::from_millis(30),
             ),
             Event::timeout(
                 "event4",
-                time.clone() + Duration::from_millis(30),
-                time.clone() + Duration::from_millis(60),
+                time + Duration::from_millis(30),
+                time + Duration::from_millis(60),
             ),
         ];
 
-        let mut aggregate = FakeProcessor::new();
+        let mut aggregate = FakeProcessor::default();
 
         events
             .iter()
