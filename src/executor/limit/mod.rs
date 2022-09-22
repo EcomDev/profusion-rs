@@ -50,7 +50,7 @@ pub trait Limiter: Sized {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Limit {
     None,
     Wait(Duration),

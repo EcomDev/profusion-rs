@@ -75,7 +75,7 @@ where
     /// Creates `MeasuredFuture` with provided vector of Events
     pub fn new(name: &'static str, inner: F, events: Vec<Event>) -> Self {
         Self {
-            inner: inner,
+            inner,
             state: MeasuredFutureState::Ready(name, events),
         }
     }
@@ -206,7 +206,7 @@ mod tests {
         })
         .await;
 
-        assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidInput.into());
+        assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidInput);
     }
 
     #[tokio::test]

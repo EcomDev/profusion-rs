@@ -1,21 +1,11 @@
 use super::{report::EventProcessor, RealtimeStatus};
 use std::time::{Duration, Instant};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct RealtimeStatusStub {
     connections: usize,
     operations: usize,
     total_operations: usize,
-}
-
-impl Default for RealtimeStatusStub {
-    fn default() -> Self {
-        Self {
-            connections: 0,
-            operations: 0,
-            total_operations: 0,
-        }
-    }
 }
 
 impl RealtimeStatusStub {
@@ -55,15 +45,12 @@ impl RealtimeStatus for RealtimeStatusStub {
     }
 }
 
+#[derive(Default)]
 pub struct FakeProcessor {
     items: Vec<(String, Duration)>,
 }
 
 impl FakeProcessor {
-    pub fn new() -> Self {
-        Self { items: vec![] }
-    }
-
     pub fn verify(self, items: Vec<(&str, Duration)>) {
         assert_eq!(
             self.items

@@ -6,7 +6,7 @@ use std::{
     task::{Context, Poll},
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum EitherFutureKind {
     Empty,
     Left,
