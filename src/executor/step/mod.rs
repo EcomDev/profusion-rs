@@ -11,7 +11,7 @@ pub use noop::NoopStep;
 pub use sequence::SequenceStep;
 
 pub trait ExecutionStep: Clone {
-    type Item;
+    type Item: Sized;
     type Output: Future<Output = MeasuredOutput<Self::Item>>;
 
     /// Executes a step by creating a future with input as an argument
@@ -22,7 +22,7 @@ pub trait ExecutionStep: Clone {
 
     /// Chains with current step as first and passed one as second.
     ///
-    /// ```
+    /// ```rust
     /// use profusion::prelude::*;
     /// use std::time::Instant;
     ///
