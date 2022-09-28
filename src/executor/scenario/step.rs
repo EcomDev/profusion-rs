@@ -4,7 +4,6 @@ use crate::{
         scenario::{Scenario, ScenarioBuilder},
     },
     prelude::{ClosureStep, ExecutionStep, NoopStep, SequenceStep},
-    RealtimeReporter,
 };
 use std::{future::Future, io::Result, marker::PhantomData};
 
@@ -88,8 +87,8 @@ where
         StepScenario {
             initialize: self.initialize.clone(),
             step: self.step.clone(),
-            _type: self._type.clone(),
-            _init_future: self._init_future.clone(),
+            _type: self._type,
+            _init_future: self._init_future,
         }
     }
 }
@@ -106,7 +105,7 @@ where
     type ExecuteOutput = Step::Output;
 
     fn initialize(&self) -> Self::InitializeOutput {
-        MeasuredFuture::new("initialize", (&self.initialize)(), Vec::with_capacity(1))
+        MeasuredFuture::new("initialize", (self.initialize)(), Vec::with_capacity(1))
     }
 
     fn execute(&self, input: Self::Item) -> Self::ExecuteOutput {

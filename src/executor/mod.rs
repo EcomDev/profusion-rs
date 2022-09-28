@@ -6,7 +6,7 @@ mod step;
 mod future;
 mod limit;
 
-pub(self) use future::MeasuredOutput;
+
 pub use scenario::{Scenario, ScenarioBuilder, StepScenario, StepScenarioBuilder};
 pub use step::{ClosureStep, ExecutionStep, NoopStep, SequenceStep};
 

@@ -1,6 +1,6 @@
 mod step;
 
-use crate::{executor::future::MeasuredOutput, RealtimeReporter};
+use crate::{executor::future::MeasuredOutput};
 use std::future::Future;
 
 pub use step::{StepScenario, StepScenarioBuilder};
