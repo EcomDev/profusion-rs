@@ -65,7 +65,21 @@ impl Event {
         Self::new(name, started_at, finished_at, EventType::Timeout)
     }
 
-    pub(crate) fn process<P: EventProcessor>(&self, processor: &mut P) {
+    /// Processes event data into supplied proccessor
+    ///
+    /// ```rust
+    /// use std::time::Duration;
+    /// use profusion::{
+    ///     report::Event, report::EventType, time::Instant,
+    ///     report::AggregateEventProcessorBuilder, report::EventProcessorBuilder
+    /// };
+    ///
+    /// let event = Event::timeout("name", Instant::now(), Instant::now());
+    /// let mut processor = AggregateEventProcessorBuilder::new().build();
+    /// event.process(&mut processor);
+    /// ```
+    ///
+    pub fn process<P: EventProcessor>(&self, processor: &mut P) {
         match self.kind {
             EventType::Success => {
                 processor.process_success(self.name, self.started_at, self.finished_at)
