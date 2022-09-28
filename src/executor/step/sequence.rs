@@ -22,7 +22,7 @@ impl<T, F, S> ExecutionStep for SequenceStep<F, S>
 where
     F: ExecutionStep<Item = T>,
     S: ExecutionStep<Item = T>,
-    T: Sized
+    T: Sized,
 {
     type Item = T;
 

@@ -1,5 +1,5 @@
 use profusion::{
-    executor::limit::{ConcurrencyLimiter, Limit, Limiter},
+    executor::{ConcurrencyLimiter, Limit, Limiter},
     report::RealtimeStatus,
 };
 

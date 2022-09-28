@@ -77,10 +77,11 @@ mod tests {
 
     #[tokio::test]
     async fn executes_closure_and_reports_success_event() {
-        let step = ClosureStep::new(
-            "success_event",
-            |counter: usize| async move { Ok(counter) },
-        );
+        let step =
+            ClosureStep::new(
+                "success_event",
+                |counter: usize| async move { Ok(counter) },
+            );
 
         let (mut events, _) = step.execute(Vec::new(), 42).await;
 

@@ -43,7 +43,7 @@ impl Counter {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct RealtimeReport {
+pub struct RealtimeReport {
     operations: Counter,
     connections: Counter,
     total_operations: Counter,

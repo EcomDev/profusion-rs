@@ -1,11 +1,15 @@
 //! Tools to process load test results and recieve realtime information
 //! on its current status.
 
+mod aggregate;
 mod event;
 mod realtime;
-mod aggregate;
 
-pub use aggregate::{AggregateEventProcessorBuilder, AggregateEntry, AggregateBucket, AggregateEventProcessor};
+pub use aggregate::{
+    AggregateBucket, AggregateEntry, AggregateEventProcessor,
+    AggregateEventProcessorBuilder,
+};
+pub use realtime::RealtimeReport;
 
 /// A type of event result during load test operation execution.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -50,8 +54,7 @@ pub trait EventProcessor {
     fn merge(&mut self, other: Self);
 }
 
-pub trait EventProcessorBuilder<T: EventProcessor>
-{
+pub trait EventProcessorBuilder<T: EventProcessor> {
     fn build(&self) -> T;
 }
 

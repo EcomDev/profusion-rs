@@ -18,7 +18,7 @@ pin_project! {
     ///
     /// Main purpose of this future is to allows to write combinators for future builders.
     /// ```
-    /// use profusion::executor::future::{EitherFuture, MeasuredFuture};
+    /// use profusion::executor::{EitherFuture, MeasuredFuture};
     /// use profusion::report::Event;
     /// use std::{future::Ready, io::Result};
     ///

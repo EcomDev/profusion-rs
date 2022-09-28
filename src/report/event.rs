@@ -318,11 +318,7 @@ mod tests {
         let time = Instant::now();
 
         let events = [
-            Event::success(
-                "event1",
-                time,
-                time + Duration::from_millis(40),
-            ),
+            Event::success("event1", time, time + Duration::from_millis(40)),
             Event::error(
                 "event2",
                 time + Duration::from_millis(10),

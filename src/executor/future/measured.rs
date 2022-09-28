@@ -41,7 +41,7 @@ pin_project! {
     ///
     /// Result of the measurement is as an [Event][`crate::report::Event`] appeneded to a vector passed as an argument.
     /// ```
-    /// use profusion::{report::Event, executor::future::MeasuredFuture};
+    /// use profusion::{report::Event, executor::MeasuredFuture};
     /// use std::time::Instant;
     ///
     /// #[tokio::main]

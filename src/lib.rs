@@ -14,4 +14,4 @@ pub(crate) use sync::{Arc, AtomicUsize, Ordering};
 pub mod test_objects;
 
 #[doc(hidden)]
-pub use report::{Event, EventType, RealtimeReporter, RealtimeStatus, EventProcessor};
+pub use report::{Event, EventProcessor, EventType, RealtimeReporter, RealtimeStatus};

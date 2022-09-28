@@ -120,20 +120,13 @@ mod tests {
         let bucket: Duration = Duration::from_millis(50);
         assert_eq!(
             vec![
-                (time + Duration::from_millis(0))
-                    .as_duration_bucket(&time, &bucket),
-                (time + Duration::from_millis(24))
-                    .as_duration_bucket(&time, &bucket),
-                (time + Duration::from_millis(25))
-                    .as_duration_bucket(&time, &bucket),
-                (time + Duration::from_millis(49))
-                    .as_duration_bucket(&time, &bucket),
-                (time + Duration::from_millis(50))
-                    .as_duration_bucket(&time, &bucket),
-                (time + Duration::from_millis(74))
-                    .as_duration_bucket(&time, &bucket),
-                (time + Duration::from_millis(75))
-                    .as_duration_bucket(&time, &bucket),
+                (time + Duration::from_millis(0)).as_duration_bucket(&time, &bucket),
+                (time + Duration::from_millis(24)).as_duration_bucket(&time, &bucket),
+                (time + Duration::from_millis(25)).as_duration_bucket(&time, &bucket),
+                (time + Duration::from_millis(49)).as_duration_bucket(&time, &bucket),
+                (time + Duration::from_millis(50)).as_duration_bucket(&time, &bucket),
+                (time + Duration::from_millis(74)).as_duration_bucket(&time, &bucket),
+                (time + Duration::from_millis(75)).as_duration_bucket(&time, &bucket),
             ],
             vec![
                 Duration::from_millis(0),
