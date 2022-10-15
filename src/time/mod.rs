@@ -45,6 +45,13 @@ pub trait DurationBucket {
     fn as_duration_bucket(&self, origin: &Instant, bucket_size: &Duration) -> Duration;
 }
 
+/// Extents [Instant][`std::time::Instant`] with addition and substitution method
+pub trait InstantOffset {
+    fn with_millis(&self, value: u64) -> Self;
+    fn with_micros(&self, value: u64) -> Self;
+    fn with_nanos(&self, value: u64) -> Self;
+}
+
 /// Compares two [Instant][`std::time::Instant`] instances with [delta][`std::time::Duration`] offset to allow time drift.
 ///
 /// # Example

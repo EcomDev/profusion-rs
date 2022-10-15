@@ -3,7 +3,7 @@ use std::io::ErrorKind;
 use super::{Event, EventProcessor, EventType};
 use crate::time::{cmp_instant_with_delta, Duration, Instant};
 
-static EVENT_DELTA: Duration = Duration::from_millis(2);
+static EVENT_DELTA: Duration = Duration::from_micros(500);
 
 impl Event {
     fn new(
@@ -108,6 +108,21 @@ impl Event {
         self.finished_at - self.started_at
     }
 
+    /// Returns instant when event has started
+    ///
+    /// ```rust
+    /// use profusion::{report::Event, report::EventType, time::Instant, time::Duration};
+    ///
+    /// let start = Instant::now();
+    //
+    /// let event = Event::error("default", start, start + Duration::from_secs(4));
+    /// assert_eq!(event.at(), start);
+    /// ```
+    pub fn at(&self) -> Instant {
+        self.started_at
+    }
+
+
     /// Type of the event that was captured
     ///
     /// ```rust
@@ -167,6 +182,7 @@ impl From<(&'static str, Instant, Duration)> for Event {
 /// ```rust
 /// use profusion::{report::Event, report::EventType, time::Instant};
 /// use std::io::{Result, Error, ErrorKind};
+/// use profusion::test_util::assert_events;
 ///
 /// let events: Vec<Event> = vec![
 ///    ("timeout_event", Instant::now(), Instant::now(), &Result::<u32>::Err(Error::from(ErrorKind::TimedOut))).into(),
@@ -174,7 +190,7 @@ impl From<(&'static str, Instant, Duration)> for Event {
 ///    ("success_event", Instant::now(), Instant::now(), &Result::<u32>::Ok(123)).into()
 /// ];
 ///
-/// assert_eq!(
+/// assert_events(
 ///     events,
 ///     vec![
 ///         Event::timeout("timeout_event", Instant::now(), Instant::now()),    
@@ -195,35 +211,10 @@ impl<T> From<(&'static str, Instant, Instant, &std::io::Result<T>)> for Event {
     }
 }
 
-/// Equality implementation for Event with time delta of 1ms
-///
-/// Events are going to be equal when start or end time is within 1ms of each other
-///
-/// # Example
-/// ```
-/// # use profusion::{report::Event, time::Instant, time::Duration};
-///
-/// let first_time = Instant::now();
-/// let first_with_below_ms = first_time + Duration::from_micros(999);
-///
-/// assert_eq!(
-///    Event::from(("delta_time", first_time, Duration::from_millis(100))),
-///    Event::from(("delta_time", first_with_below_ms, Duration::from_millis(100))),
-/// )
-/// ```
-impl PartialEq for Event {
-    fn eq(&self, other: &Self) -> bool {
-        self.name.eq(other.name)
-            && cmp_instant_with_delta(&self.started_at, &other.started_at, &EVENT_DELTA)
-            && cmp_instant_with_delta(&self.finished_at, &other.finished_at, &EVENT_DELTA)
-            && self.kind.eq(&other.kind)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_objects::FakeProcessor;
+    use crate::test_util::FakeProcessor;
     use std::time::{Duration, Instant};
 
     static NANOSECOND: Duration = Duration::from_nanos(1);
@@ -295,21 +286,6 @@ mod tests {
         assert_ne!(
             Event::success("event1", start, end),
             Event::error("event1", start, end)
-        );
-    }
-
-    #[test]
-    fn events_are_equal_when_time_drift_is_less_then_equals_1ms() {
-        let (start, end) = create_time_pair(None);
-
-        assert_eq!(
-            Event::new("event1", start + EVENT_DELTA, end, EventType::Success),
-            Event::new(
-                "event1",
-                start,
-                end + EVENT_DELTA - NANOSECOND,
-                EventType::Success
-            )
         );
     }
 

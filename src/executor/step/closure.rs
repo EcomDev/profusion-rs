@@ -62,6 +62,7 @@ mod tests {
     use std::time::Instant;
 
     use crate::Event;
+    use crate::test_util::assert_events;
 
     use super::*;
 
@@ -83,11 +84,13 @@ mod tests {
                 |counter: usize| async move { Ok(counter) },
             );
 
-        let (mut events, _) = step.execute(Vec::new(), 42).await;
+        let (events, _) = step.execute(Vec::new(), 42).await;
 
-        assert_eq!(
-            events.pop().unwrap(),
-            Event::success("success_event", Instant::now(), Instant::now())
+        assert_events(
+            events,
+            vec![
+                Event::success("success_event", Instant::now(), Instant::now())
+            ]
         )
     }
 
@@ -110,11 +113,11 @@ mod tests {
 
         let step = ClosureStep::new("success_event", calculate_answer);
 
-        let (mut events, _) = step.execute(Vec::new(), 42).await;
+        let (events, _) = step.execute(Vec::new(), 42).await;
 
-        assert_eq!(
-            events.pop().unwrap(),
-            Event::success("success_event", Instant::now(), Instant::now())
+        assert_events(
+            events,
+            vec![Event::success("success_event", Instant::now(), Instant::now())]
         )
     }
 }

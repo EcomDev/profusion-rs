@@ -49,6 +49,7 @@ mod tests {
         },
         Event,
     };
+    use crate::test_util::assert_events;
 
     #[tokio::test]
     async fn returns_result_from_first_step() {
@@ -81,13 +82,14 @@ mod tests {
             ClosureStep::new("second_call", |item: usize| async move { Ok(item) }),
         );
 
+        let time = Instant::now();
         let (events, _) = step.execute(Vec::new(), 1).await;
 
-        assert_eq!(
+        assert_events(
             events,
             vec![
-                Event::success("first_call", Instant::now(), Instant::now()),
-                Event::success("second_call", Instant::now(), Instant::now()),
+                Event::success("first_call", time, time),
+                Event::success("second_call", time, time),
             ]
         );
     }

@@ -39,6 +39,7 @@ mod tests {
     use std::time::Instant;
 
     use crate::Event;
+    use crate::test_util::assert_events;
 
     use super::*;
 
@@ -53,16 +54,18 @@ mod tests {
     #[tokio::test]
     async fn does_not_add_any_events() {
         let step = NoopStep::new();
+        let time = Instant::now();
+
         let (events, _) = step
             .execute(
-                vec![Event::success("one", Instant::now(), Instant::now())],
+                vec![Event::success("one", time, time)],
                 42,
             )
             .await;
 
-        assert_eq!(
+        assert_events(
             events,
-            vec![Event::success("one", Instant::now(), Instant::now())]
+        vec![Event::success("one", time, time)]
         );
     }
 

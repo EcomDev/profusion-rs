@@ -28,7 +28,7 @@ impl Limiter for ConcurrencyLimiter {
 mod tests {
 
     use super::{ConcurrencyLimiter, Duration, Limit, Limiter};
-    use crate::test_objects::RealtimeStatusStub;
+    use crate::test_util::RealtimeStatusStub;
 
     #[test]
 

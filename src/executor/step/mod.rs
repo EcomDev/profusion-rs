@@ -28,6 +28,7 @@ pub trait ExecutionStep: Clone {
     ///
     /// #[tokio::main]
     /// async fn main() {
+    ///     use profusion::test_util::assert_events;
     ///     let step = NoopStep::new()
     ///         .step("first", |value| async move { Ok(value + 10) } )        
     ///         .step("second", |value| async move { Ok(value + 10) } )        
@@ -35,13 +36,14 @@ pub trait ExecutionStep: Clone {
     ///         .step("last", |value| async move { Ok(value + 2) } )        
     ///     ;
     ///     let data: usize = 10;
+    ///     let time = Instant::now();
     ///     let (events, result) = step.execute(Vec::with_capacity(step.capacity()), data).await;
     ///
-    ///     assert_eq!(events, vec![
-    ///         Event::success("first", Instant::now(), Instant::now()),
-    ///         Event::success("second", Instant::now(), Instant::now()),
-    ///         Event::success("third", Instant::now(), Instant::now()),
-    ///         Event::success("last", Instant::now(), Instant::now()),
+    ///     assert_events(events, vec![
+    ///         Event::success("first", time, time),
+    ///         Event::success("second", time, time),
+    ///         Event::success("third", time, time),
+    ///         Event::success("last", time, time),
     ///     ]);
     ///     assert_eq!(result.unwrap(), 42)
     /// }

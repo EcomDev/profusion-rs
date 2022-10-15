@@ -92,6 +92,7 @@ mod tests {
 
     use super::*;
     use crate::executor::step::{ClosureStep, NoopStep};
+    use crate::test_util::assert_events;
 
     #[tokio::test]
     async fn returns_result_from_first_future() {
@@ -130,13 +131,14 @@ mod tests {
             ClosureStep::new("second_step", |value: usize| async move { Ok(value + 2) }),
         );
 
+        let time = Instant::now();
         let (events, _) = step.await;
 
-        assert_eq!(
+        assert_events(
             events,
             vec![
-                Event::success("first_step", Instant::now(), Instant::now()),
-                Event::success("second_step", Instant::now(), Instant::now()),
+                Event::success("first_step", time, time),
+                Event::success("second_step", time, time),
             ]
         )
     }
@@ -152,11 +154,12 @@ mod tests {
             ClosureStep::new("second_step", |value: usize| async move { Ok(value + 2) }),
         );
 
+        let time = Instant::now();
         let (events, _) = step.await;
 
-        assert_eq!(
+        assert_events(
             events,
-            vec![Event::error("first_step", Instant::now(), Instant::now())]
+            vec![Event::error("first_step", time, time)]
         )
     }
 

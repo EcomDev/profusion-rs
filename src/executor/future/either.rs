@@ -44,9 +44,9 @@ pin_project! {
 }
 
 impl<T, L, R> EitherFuture<L, R>
-where
-    L: Future<Output = MeasuredOutput<T>>,
-    R: Future<Output = MeasuredOutput<T>>,
+    where
+        L: Future<Output=MeasuredOutput<T>>,
+        R: Future<Output=MeasuredOutput<T>>,
 {
     /// Creates empty variant of the future
     pub fn empty() -> Self {
@@ -73,9 +73,9 @@ where
 }
 
 impl<T, L, R> Future for EitherFuture<L, R>
-where
-    L: Future<Output = MeasuredOutput<T>>,
-    R: Future<Output = MeasuredOutput<T>>,
+    where
+        L: Future<Output=MeasuredOutput<T>>,
+        R: Future<Output=MeasuredOutput<T>>,
 {
     type Output = MeasuredOutput<T>;
 
@@ -104,36 +104,35 @@ mod tests {
         io::ErrorKind,
         time::Instant,
     };
+    use std::time::Duration;
+
+    use tokio::join;
+    use crate::test_util::assert_events;
 
     #[tokio::test]
     async fn polls_assigned_futures() {
-        let futures = vec![
-            EitherFuture::left(MeasuredFuture::new("left", async { Ok(1) }, Vec::new())),
-            EitherFuture::right(MeasuredFuture::new(
-                "right",
-                async { Ok(2) },
-                Vec::new(),
-            )),
-        ];
+        let time = Instant::now();
 
-        let mut results = Vec::new();
-        let mut events = Vec::new();
+        let (events, first_result) = EitherFuture::<_, Ready<(Vec<Event>, Result<usize>)>>::left(
+            MeasuredFuture::new("left", async { Ok(1) }, vec![])
+        ).await;
+        let (events, second_result) = EitherFuture::<Ready<(Vec<Event>, Result<usize>)>, _>::right(
+            MeasuredFuture::new("right", async { Ok(2) }, events)
+        ).await;
 
-        for future in futures {
-            let (mut measurement, result) = future.await;
-            results.push(result.unwrap());
-            events.append(&mut measurement);
-        }
+        let results: Vec<usize> = vec![first_result.unwrap(), second_result.unwrap()];
+
+        assert_events(
+            events,
+            vec![
+                Event::success("left", time, time),
+                Event::success("right", time, time)
+            ]
+        );
 
         assert_eq!(
-            events
-                .into_iter()
-                .zip(results.into_iter())
-                .collect::<Vec<(Event, usize)>>(),
-            vec![
-                (Event::success("left", Instant::now(), Instant::now()), 1),
-                (Event::success("right", Instant::now(), Instant::now()), 2)
-            ]
+            results,
+            vec![1, 2]
         );
     }
 

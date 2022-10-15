@@ -9,9 +9,9 @@ pub mod time;
 
 pub(crate) use sync::{Arc, AtomicUsize, Ordering};
 
-#[cfg(any(test, feature = "test"))]
+#[cfg(any(test, doctest, feature = "test"))]
 #[warn(missing_docs, unreachable_pub)]
-pub mod test_objects;
+pub mod test_util;
 
 #[doc(hidden)]
 pub use report::{Event, EventProcessor, EventType, RealtimeReporter, RealtimeStatus};

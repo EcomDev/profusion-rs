@@ -2,9 +2,9 @@ use super::*;
 use pin_project_lite::pin_project;
 use std::{
     pin::Pin,
-    task::{Context, Poll},
-    time::Instant,
+    task::{Context, Poll}
 };
+use crate::time::Instant;
 
 #[derive(Debug)]
 enum MeasuredFutureState {
@@ -41,22 +41,23 @@ pin_project! {
     ///
     /// Result of the measurement is as an [Event][`crate::report::Event`] appeneded to a vector passed as an argument.
     /// ```
-    /// use profusion::{report::Event, executor::MeasuredFuture};
+    /// use profusion::{report::Event, executor::MeasuredFuture, test_util::assert_events};
     /// use std::time::Instant;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let (events, _) = MeasuredFuture::new(
+    ///     let  time = Instant::now();
+    ///     let (events, _) = MeasuredFuture::new(
     ///        "one_plus_one",
     ///        async { Ok(1 + 1) },
-    ///        vec![Event::success("another_event", Instant::now(), Instant::now())]
+    ///        vec![Event::success("another_event", time, time)]
     ///    ).await;
     ///
-    ///    assert_eq!(
+    ///    assert_events(
     ///        events,
     ///        vec![
-    ///            Event::success("another_event", Instant::now(), Instant::now()),
-    ///            Event::success("one_plus_one", Instant::now(), Instant::now())
+    ///            Event::success("another_event", time, time),
+    ///            Event::success("one_plus_one", time, time)
     ///       ]
     ///    );
     /// }
@@ -113,6 +114,8 @@ where
 #[cfg(test)]
 mod tests {
     use std::io::ErrorKind;
+    use std::time::Duration;
+    use crate::test_util::assert_events;
 
     use super::*;
 
@@ -148,7 +151,7 @@ mod tests {
         let mut state = MeasuredFutureState::Running("one", Vec::new(), Instant::now());
         let events = state.finish_timer(&Ok(1));
 
-        assert_eq!(
+        assert_events(
             events,
             vec![Event::success("one", Instant::now(), Instant::now())]
         );
@@ -166,12 +169,14 @@ mod tests {
     async fn returns_event_based_on_underlying_future_execution() {
         let (events, _) = MeasuredFuture::empty("fast_future", async { Ok(1 + 1) }).await;
 
-        assert_eq!(
+        let time = Instant::now();
+
+        assert_events(
             events,
             vec![Event::success(
                 "fast_future",
-                Instant::now(),
-                Instant::now()
+                time,
+                time
             )]
         );
     }
@@ -179,22 +184,24 @@ mod tests {
     #[tokio::test]
     async fn appends_to_existings_events_after_execution() {
         let future = || async { Ok(1 + 1) };
+        let time = Instant::now();
+
         let (events, _) = MeasuredFuture::new(
             "fast_future",
             future(),
             vec![Event::success(
                 "another_event",
-                Instant::now(),
-                Instant::now(),
+                time,
+                time,
             )],
         )
         .await;
 
-        assert_eq!(
+        assert_events(
             events,
             vec![
-                Event::success("another_event", Instant::now(), Instant::now()),
-                Event::success("fast_future", Instant::now(), Instant::now())
+                Event::success("another_event", time, time),
+                Event::success("fast_future", time, time)
             ]
         );
     }
@@ -217,17 +224,18 @@ mod tests {
         .await;
 
         let (events, _) = MeasuredFuture::new(
-            "errored_out",
+            "error_out",
             async { Result::<u32>::Err(ErrorKind::InvalidData.into()) },
             events,
         )
         .await;
 
-        assert_eq!(
+        let time = Instant::now();
+        assert_events(
             events,
             vec![
-                Event::timeout("timer_out", Instant::now(), Instant::now()),
-                Event::error("errored_out", Instant::now(), Instant::now()),
+                Event::timeout("timer_out", time, time),
+                Event::error("error_out", time, time),
             ]
         );
     }

@@ -35,7 +35,7 @@ impl Limiter for MaxDurationLimiter {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_objects::RealtimeStatusStub;
+    use crate::test_util::RealtimeStatusStub;
 
     use super::{Duration, Limit, Limiter, MaxDurationLimiter};
 

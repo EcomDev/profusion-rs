@@ -1,4 +1,4 @@
-use super::{Duration, DurationBucket, Instant};
+use super::{Duration, DurationBucket, InstantOffset, Instant};
 
 impl DurationBucket for Instant {
     fn as_duration_bucket(&self, origin: &Instant, bucket_size: &Duration) -> Duration {
@@ -14,6 +14,23 @@ impl DurationBucket for Instant {
                     _ => bucket_nanos,
                 },
         )
+    }
+}
+
+impl InstantOffset for Instant {
+    #[inline]
+    fn with_millis(&self, value: u64) -> Self {
+        *self + Duration::from_millis(value)
+    }
+
+    #[inline]
+    fn with_micros(&self, value: u64) -> Self {
+        *self + Duration::from_micros(value)
+    }
+
+    #[inline]
+    fn with_nanos(&self, value: u64) -> Self {
+        *self + Duration::from_nanos(value)
     }
 }
 
@@ -138,5 +155,32 @@ mod tests {
                 Duration::from_millis(100),
             ]
         );
+    }
+
+    #[test]
+    fn adds_milliseconds() {
+        let time = Instant::now();
+        assert_eq!(
+            time.with_millis(430),
+            time + Duration::new(0, 430_000_000)
+        )
+    }
+
+    #[test]
+    fn adds_microseconds() {
+        let time = Instant::now();
+        assert_eq!(
+            time.with_micros(430),
+            time + Duration::new(0, 430_000)
+        )
+    }
+
+    #[test]
+    fn adds_nanoseconds() {
+        let time = Instant::now();
+        assert_eq!(
+            time.with_nanos(120),
+            time + Duration::new(0, 120)
+        )
     }
 }

@@ -1,9 +1,9 @@
 mod step;
 
-use crate::{executor::future::MeasuredOutput};
+use crate::{Event, executor::future::MeasuredOutput};
 use std::future::Future;
 
-pub use step::{StepScenario, StepScenarioBuilder};
+pub use step::{StepScenario, StepScenarioBuilder, SCENARIO_INITIALIZE, SCENARIO_STEP};
 
 pub trait ScenarioBuilder {
     type Item: Sized;
@@ -19,7 +19,7 @@ pub trait Scenario {
 
     type ExecuteOutput: Future<Output = MeasuredOutput<Self::Item>>;
 
-    fn initialize(&self) -> Self::InitializeOutput;
+    fn initialize(&self, events: Vec<Event>) -> Self::InitializeOutput;
 
-    fn execute(&self, input: Self::Item) -> Self::ExecuteOutput;
+    fn execute(&self, input: Self::Item, events: Vec<Event>) -> Self::ExecuteOutput;
 }

@@ -1,11 +1,11 @@
-use crate::{
-    executor::{
-        future::{MeasuredFuture, MeasuredOutput},
-        scenario::{Scenario, ScenarioBuilder},
-    },
-    prelude::{ClosureStep, ExecutionStep, NoopStep, SequenceStep},
-};
+use crate::{Event, executor::{
+    future::{MeasuredFuture, MeasuredOutput},
+    scenario::{Scenario, ScenarioBuilder},
+}, prelude::{ClosureStep, ExecutionStep, NoopStep, SequenceStep}};
 use std::{future::Future, io::Result, marker::PhantomData};
+
+pub const SCENARIO_INITIALIZE: &'static str = "scenario::initialize";
+pub const SCENARIO_STEP: &'static str = "scenario::step";
 
 pub struct StepScenarioBuilder<T, Step, Init, InitFut> {
     initialize: Init,
@@ -49,7 +49,7 @@ where
         F: Fn(T) -> Fut + Clone,
         Fut: Future<Output = Result<T>>,
     {
-        self.with_named_step("", step)
+        self.with_named_step(SCENARIO_STEP, step)
     }
 
     pub fn with_named_step<F, Fut>(
@@ -93,6 +93,8 @@ where
     }
 }
 
+
+
 impl<T, Step, Init, InitFut, StepFut> Scenario for StepScenario<T, Step, Init, InitFut>
 where
     Init: Fn() -> InitFut + Clone,
@@ -104,23 +106,24 @@ where
     type InitializeOutput = MeasuredFuture<InitFut>;
     type ExecuteOutput = Step::Output;
 
-    fn initialize(&self) -> Self::InitializeOutput {
-        MeasuredFuture::new("initialize", (self.initialize)(), Vec::with_capacity(1))
+    fn initialize(&self, events: Vec<Event>) -> Self::InitializeOutput {
+        MeasuredFuture::new(SCENARIO_INITIALIZE, (self.initialize)(), events)
     }
 
-    fn execute(&self, input: Self::Item) -> Self::ExecuteOutput {
-        self.step
-            .execute(Vec::with_capacity(self.step.capacity()), input)
+    fn execute(&self, input: Self::Item, events: Vec<Event>) -> Self::ExecuteOutput {
+        self.step.execute(events, input)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use tokio::time::sleep;
     use super::*;
     use crate::{
         report::Event,
         time::{Duration, Instant},
     };
+    use crate::test_util::assert_events;
 
     async fn init() -> Result<usize> {
         Ok(1)
@@ -135,7 +138,7 @@ mod tests {
     }
 
     async fn init_wait() -> Result<usize> {
-        tokio::time::sleep(Duration::from_millis(5)).await;
+        sleep(Duration::from_millis(5)).await;
         Ok(1)
     }
 
@@ -148,10 +151,40 @@ mod tests {
 
         let scenario = builder.build();
 
-        let (_, result) = scenario.initialize().await;
-        let (_, result) = scenario.execute(result.unwrap()).await;
+        let (_, result) = scenario.initialize(vec![]).await;
+        let (_, result) = scenario.execute(result.unwrap(), vec![]).await;
 
         assert_eq!(result.unwrap(), 5)
+    }
+
+    #[tokio::test]
+    async fn accumulates_events_passed_argument() {
+        let builder = StepScenarioBuilder::new(init_wait)
+            .with_step( | item | async move {
+                sleep(Duration::from_millis(2)).await;
+                Ok(item)
+            })
+            .with_step( | item | async move {
+                sleep(Duration::from_millis(4)).await;
+                Ok(item)
+            })
+            ;
+
+        let scenario = builder.build();
+        let events = vec![];
+        let time_reference = Instant::now();
+
+        let (events, _) = scenario.initialize(events).await;
+        let (events, _) = scenario.execute(1, events).await;
+
+        assert_events(
+            events,
+            vec![
+                Event::success(SCENARIO_INITIALIZE, time_reference, time_reference + Duration::from_millis(5)),
+                Event::success(SCENARIO_STEP, time_reference + Duration::from_millis(5), time_reference + Duration::from_millis(8)),
+                Event::success(SCENARIO_STEP, time_reference + Duration::from_millis(8), time_reference + Duration::from_millis(12)),
+            ]
+        )
     }
 
     #[tokio::test]
@@ -160,13 +193,15 @@ mod tests {
 
         let scenario = builder.build();
         let time = Instant::now();
-        let (events, _) = scenario.initialize().await;
-        assert_eq!(
+        let events = Vec::with_capacity(1);
+        let (events, _) = scenario.initialize(events).await;
+
+        assert_events(
             events,
             vec![Event::success(
-                "initialize",
+                SCENARIO_INITIALIZE,
                 time,
-                time + Duration::from_millis(5)
+                time + Duration::from_millis(6)
             )]
         );
     }

@@ -33,7 +33,7 @@ pub enum EventType {
 
 /// An `Event` type to represent the result of executing
 /// a single operation during load test.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Event {
     name: &'static str,
     started_at: Instant,
