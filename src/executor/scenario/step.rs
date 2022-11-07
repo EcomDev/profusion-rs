@@ -1,8 +1,9 @@
+use std::{future::Future, io::Result, marker::PhantomData};
+
 use crate::{Event, executor::{
     future::{MeasuredFuture, MeasuredOutput},
     scenario::{Scenario, ScenarioBuilder},
 }, prelude::{ClosureStep, ExecutionStep, NoopStep, SequenceStep}};
-use std::{future::Future, io::Result, marker::PhantomData};
 
 pub const SCENARIO_INITIALIZE: &'static str = "scenario::initialize";
 pub const SCENARIO_STEP: &'static str = "scenario::step";
@@ -22,9 +23,9 @@ pub struct StepScenario<T, Step, Init, InitFut> {
 }
 
 impl<T, Init, InitFut> StepScenarioBuilder<T, NoopStep<T>, Init, InitFut>
-where
-    Init: Fn() -> InitFut + Clone,
-    InitFut: Future<Output = Result<T>>,
+    where
+        Init: Fn() -> InitFut + Clone,
+        InitFut: Future<Output=Result<T>>,
 {
     pub fn new(initialize: Init) -> Self {
         Self {
@@ -37,17 +38,17 @@ where
 }
 
 impl<T, Step, Init, StepFut, InitFut> StepScenarioBuilder<T, Step, Init, InitFut>
-where
-    Step: ExecutionStep<Item = T, Output = StepFut>,
-    StepFut: Future<Output = MeasuredOutput<T>>,
+    where
+        Step: ExecutionStep<Item=T, Output=StepFut>,
+        StepFut: Future<Output=MeasuredOutput<T>>,
 {
     pub fn with_step<F, Fut>(
         self,
         step: F,
     ) -> StepScenarioBuilder<T, SequenceStep<Step, ClosureStep<T, F, Fut>>, Init, InitFut>
-    where
-        F: Fn(T) -> Fut + Clone,
-        Fut: Future<Output = Result<T>>,
+        where
+            F: Fn(T) -> Fut + Clone,
+            Fut: Future<Output=Result<T>>,
     {
         self.with_named_step(SCENARIO_STEP, step)
     }
@@ -57,9 +58,9 @@ where
         name: &'static str,
         step: F,
     ) -> StepScenarioBuilder<T, SequenceStep<Step, ClosureStep<T, F, Fut>>, Init, InitFut>
-    where
-        F: Fn(T) -> Fut + Clone,
-        Fut: Future<Output = Result<T>>,
+        where
+            F: Fn(T) -> Fut + Clone,
+            Fut: Future<Output=Result<T>>,
     {
         let step = self.step.step(name, step);
 
@@ -73,12 +74,12 @@ where
 }
 
 impl<T, Step, Init, InitFut, StepFut> ScenarioBuilder
-    for StepScenarioBuilder<T, Step, Init, InitFut>
-where
-    Init: Fn() -> InitFut + Clone,
-    InitFut: Future<Output = Result<T>>,
-    Step: ExecutionStep<Item = T, Output = StepFut>,
-    StepFut: Future<Output = MeasuredOutput<T>>,
+for StepScenarioBuilder<T, Step, Init, InitFut>
+    where
+        Init: Fn() -> InitFut + Clone,
+        InitFut: Future<Output=Result<T>>,
+        Step: ExecutionStep<Item=T, Output=StepFut>,
+        StepFut: Future<Output=MeasuredOutput<T>>,
 {
     type Item = T;
     type Scenario = StepScenario<T, Step, Init, InitFut>;
@@ -94,13 +95,12 @@ where
 }
 
 
-
 impl<T, Step, Init, InitFut, StepFut> Scenario for StepScenario<T, Step, Init, InitFut>
-where
-    Init: Fn() -> InitFut + Clone,
-    InitFut: Future<Output = Result<T>>,
-    Step: ExecutionStep<Item = T, Output = StepFut>,
-    StepFut: Future<Output = MeasuredOutput<T>>,
+    where
+        Init: Fn() -> InitFut + Clone,
+        InitFut: Future<Output=Result<T>>,
+        Step: ExecutionStep<Item=T, Output=StepFut>,
+        StepFut: Future<Output=MeasuredOutput<T>>,
 {
     type Item = T;
     type InitializeOutput = MeasuredFuture<InitFut>;
@@ -118,12 +118,15 @@ where
 #[cfg(test)]
 mod tests {
     use tokio::time::sleep;
-    use super::*;
+
     use crate::{
         report::Event,
         time::{Duration, Instant},
     };
     use crate::test_util::assert_events;
+    use crate::time::InstantOffset;
+
+    use super::*;
 
     async fn init() -> Result<usize> {
         Ok(1)
@@ -160,11 +163,11 @@ mod tests {
     #[tokio::test]
     async fn accumulates_events_passed_argument() {
         let builder = StepScenarioBuilder::new(init_wait)
-            .with_step( | item | async move {
+            .with_step(|item| async move {
                 sleep(Duration::from_millis(2)).await;
                 Ok(item)
             })
-            .with_step( | item | async move {
+            .with_step(|item| async move {
                 sleep(Duration::from_millis(4)).await;
                 Ok(item)
             })
@@ -180,10 +183,10 @@ mod tests {
         assert_events(
             events,
             vec![
-                Event::success(SCENARIO_INITIALIZE, time_reference, time_reference + Duration::from_millis(5)),
-                Event::success(SCENARIO_STEP, time_reference + Duration::from_millis(5), time_reference + Duration::from_millis(8)),
-                Event::success(SCENARIO_STEP, time_reference + Duration::from_millis(8), time_reference + Duration::from_millis(12)),
-            ]
+                Event::success(SCENARIO_INITIALIZE, time_reference, time_reference.with_millis(5)),
+                Event::success(SCENARIO_STEP, time_reference.with_millis(5), time_reference.with_millis(8)),
+                Event::success(SCENARIO_STEP, time_reference.with_millis(8), time_reference.with_millis(12)),
+            ],
         )
     }
 
@@ -201,8 +204,8 @@ mod tests {
             vec![Event::success(
                 SCENARIO_INITIALIZE,
                 time,
-                time + Duration::from_millis(6)
-            )]
+                time.with_millis(6),
+            )],
         );
     }
 }

@@ -8,10 +8,10 @@ license = "MIT"
 
 [lib]
 name = "profusion"
-crate-type = [ "lib" ]
+crate-type = ["lib"]
 
-[dependencies] 
-tokio = { version = "1", features=["rt", "time", "macros"] }
+[dependencies]
+tokio = { version = "1", features = ["rt", "time", "macros"] }
 pin-project-lite = "0.2"
 hdrhistogram = "7"
 more-asserts = { version = "0.3", optional = true }
@@ -20,11 +20,11 @@ more-asserts = { version = "0.3", optional = true }
 loom = "0.5"
 itertools = "0.10.3"
 criterion = "0.3"
-tokio = { version = "1", features=["rt", "time", "macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["rt", "time", "macros", "rt-multi-thread"] }
 
 [features]
-default = [ "test" ]
-test = [ "more-asserts" ]
+default = ["test"]
+test = ["more-asserts"]
 
 [profile.release]
 opt-level = 3

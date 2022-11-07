@@ -4,16 +4,17 @@ use std::{
     task::{Context, Poll},
 };
 
-use super::MeasuredOutput;
+use pin_project_lite::pin_project;
+
 use crate::{
+    Event,
     executor::{
         future::{EitherFuture, EitherFutureKind},
         step::ExecutionStep,
     },
-    Event,
 };
 
-use pin_project_lite::pin_project;
+use super::MeasuredOutput;
 
 pin_project! {
     pub struct SequenceFuture <T, F, S>
@@ -30,9 +31,9 @@ pin_project! {
 }
 
 impl<T, F, S> SequenceFuture<T, F, S>
-where
-    F: ExecutionStep<Item = T>,
-    S: ExecutionStep<Item = T>,
+    where
+        F: ExecutionStep<Item=T>,
+        S: ExecutionStep<Item=T>,
 {
     pub fn new(events: Vec<Event>, value: T, first: F, second: S) -> Self {
         Self {
@@ -45,9 +46,9 @@ where
 }
 
 impl<T, F, S> Future for SequenceFuture<T, F, S>
-where
-    F: ExecutionStep<Item = T>,
-    S: ExecutionStep<Item = T>,
+    where
+        F: ExecutionStep<Item=T>,
+        S: ExecutionStep<Item=T>,
 {
     type Output = MeasuredOutput<T>;
 
@@ -77,7 +78,7 @@ where
                     continue;
                 }
                 (EitherFutureKind::Right, (events, Ok(value))) => {
-                    return Poll::Ready((events, Ok(value)))
+                    return Poll::Ready((events, Ok(value)));
                 }
                 (_, (events, Err(error))) => return Poll::Ready((events, Err(error))),
                 _ => unreachable!(),
@@ -90,9 +91,10 @@ where
 mod tests {
     use std::{io::ErrorKind, time::Instant, vec};
 
-    use super::*;
     use crate::executor::step::{ClosureStep, NoopStep};
     use crate::test_util::assert_events;
+
+    use super::*;
 
     #[tokio::test]
     async fn returns_result_from_first_future() {
@@ -139,7 +141,7 @@ mod tests {
             vec![
                 Event::success("first_step", time, time),
                 Event::success("second_step", time, time),
-            ]
+            ],
         )
     }
 
@@ -159,7 +161,7 @@ mod tests {
 
         assert_events(
             events,
-            vec![Event::error("first_step", time, time)]
+            vec![Event::error("first_step", time, time)],
         )
     }
 

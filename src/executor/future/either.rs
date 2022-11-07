@@ -1,10 +1,12 @@
-use super::*;
-use pin_project_lite::pin_project;
 use std::{
     io::ErrorKind,
     pin::Pin,
     task::{Context, Poll},
 };
+
+use pin_project_lite::pin_project;
+
+use super::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum EitherFutureKind {
@@ -98,16 +100,15 @@ impl<T, L, R> Future for EitherFuture<L, R>
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::{
         future::{ready, Ready},
         io::ErrorKind,
         time::Instant,
     };
-    use std::time::Duration;
 
-    use tokio::join;
     use crate::test_util::assert_events;
+
+    use super::*;
 
     #[tokio::test]
     async fn polls_assigned_futures() {
@@ -126,8 +127,8 @@ mod tests {
             events,
             vec![
                 Event::success("left", time, time),
-                Event::success("right", time, time)
-            ]
+                Event::success("right", time, time),
+            ],
         );
 
         assert_eq!(

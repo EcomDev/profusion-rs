@@ -1,11 +1,10 @@
 //! Extensions of [`std::time::Instant`] and time calculation utilities.
 
-mod instant;
-
+use std::cmp::Ordering;
 #[doc(hidden)]
 pub use std::time::{Duration, Instant};
 
-use std::cmp::Ordering;
+mod instant;
 
 /// Extents [Instant][`std::time::Instant`] with [as_duration_bucket][`DurationBucket::as_duration_bucket`] method.
 pub trait DurationBucket {

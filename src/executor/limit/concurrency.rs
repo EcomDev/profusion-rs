@@ -7,6 +7,20 @@ pub struct ConcurrencyLimiter {
 }
 
 impl ConcurrencyLimiter {
+    ///
+    ///
+    /// # Arguments
+    ///
+    /// * `max_concurrency`:
+    /// * `wait_for`:
+    ///
+    /// returns: ConcurrencyLimiter
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     pub fn new(max_concurrency: usize, wait_for: Duration) -> Self {
         Self {
             max_concurrency,
@@ -26,13 +40,12 @@ impl Limiter for ConcurrencyLimiter {
 
 #[cfg(test)]
 mod tests {
-
-    use super::{ConcurrencyLimiter, Duration, Limit, Limiter};
     use crate::test_util::RealtimeStatusStub;
 
-    #[test]
+    use super::{ConcurrencyLimiter, Duration, Limit, Limiter};
 
-    fn no_limit_when_enought_when_operation_limit_is_not_reached() {
+    #[test]
+    fn no_limit_when_enough_when_operation_limit_is_not_reached() {
         let limiter = ConcurrencyLimiter::new(20, Duration::from_millis(1));
 
         assert_eq!(
@@ -42,7 +55,6 @@ mod tests {
     }
 
     #[test]
-
     fn applies_wait_limit_when_operations_reach_max_value() {
         let limiter = ConcurrencyLimiter::new(20, Duration::from_millis(5));
 
@@ -53,7 +65,6 @@ mod tests {
     }
 
     #[test]
-
     fn applies_wait_limit_when_operations_exceeds_max_value() {
         let limiter = ConcurrencyLimiter::new(20, Duration::from_millis(5));
 

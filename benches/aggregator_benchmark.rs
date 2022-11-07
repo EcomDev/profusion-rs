@@ -1,12 +1,13 @@
-use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use std::time::{Duration, Instant};
 
+use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
+
 use profusion::{
+    EventProcessor,
     report::{
         AggregateEventProcessor, AggregateEventProcessorBuilder, Event,
         EventProcessorBuilder,
     },
-    EventProcessor,
 };
 
 fn measure_record(c: &mut Criterion) {

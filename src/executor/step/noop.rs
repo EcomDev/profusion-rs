@@ -1,10 +1,9 @@
+use std::future::{ready, Ready};
+use std::marker::PhantomData;
+
 use crate::executor::future::MeasuredOutput;
 
 use super::ExecutionStep;
-
-use std::future::{ready, Ready};
-
-use std::marker::PhantomData;
 
 pub struct NoopStep<T>(PhantomData<T>);
 
@@ -65,7 +64,7 @@ mod tests {
 
         assert_events(
             events,
-        vec![Event::success("one", time, time)]
+            vec![Event::success("one", time, time)],
         );
     }
 

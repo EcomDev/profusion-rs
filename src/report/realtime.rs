@@ -1,5 +1,6 @@
-use super::{RealtimeReporter, RealtimeStatus};
 use crate::{Arc, AtomicUsize, Ordering};
+
+use super::{RealtimeReporter, RealtimeStatus};
 
 #[derive(Debug)]
 struct Counter(Arc<AtomicUsize>);
@@ -94,8 +95,9 @@ impl RealtimeStatus for RealtimeReport {
 
 #[cfg(test)]
 mod tests {
+    use loom::thread::{JoinHandle, spawn, yield_now};
+
     use super::*;
-    use loom::thread::{spawn, yield_now, JoinHandle};
 
     impl From<usize> for Counter {
         fn from(value: usize) -> Self {
@@ -126,8 +128,8 @@ mod tests {
             run_on_threads(report.clone(), |report| {
                 repeat(7, &report, |report| report.operation_started());
             })
-            .join()
-            .unwrap();
+                .join()
+                .unwrap();
 
             assert_eq!(report.operations(), 7);
         });
@@ -143,8 +145,8 @@ mod tests {
 
                 repeat(4, &report, |report| report.operation_finished());
             })
-            .join()
-            .unwrap();
+                .join()
+                .unwrap();
 
             assert_eq!(report.operations(), 3);
         });
@@ -158,8 +160,8 @@ mod tests {
             run_on_threads(report.clone(), |report| {
                 repeat(99, &report, |report| report.connection_created());
             })
-            .join()
-            .unwrap();
+                .join()
+                .unwrap();
 
             assert_eq!(report.connections(), 99);
         });
@@ -175,8 +177,8 @@ mod tests {
 
                 repeat(80, &report, |report| report.connection_closed());
             })
-            .join()
-            .unwrap();
+                .join()
+                .unwrap();
 
             assert_eq!(report.connections(), 19);
         });
@@ -192,8 +194,8 @@ mod tests {
 
                 repeat(80, &report, |report| report.operation_finished());
             })
-            .join()
-            .unwrap();
+                .join()
+                .unwrap();
 
             assert_eq!(report.total_operations(), 99);
         });
@@ -228,8 +230,8 @@ mod tests {
             run_on_threads(counter.clone(), |counter| {
                 repeat(100, &counter, |counter| counter.increment());
             })
-            .join()
-            .unwrap();
+                .join()
+                .unwrap();
 
             assert_eq!(counter.value(), usize::MAX);
         });

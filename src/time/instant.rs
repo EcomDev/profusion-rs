@@ -1,4 +1,4 @@
-use super::{Duration, DurationBucket, InstantOffset, Instant};
+use super::{Duration, DurationBucket, Instant, InstantOffset};
 
 impl DurationBucket for Instant {
     fn as_duration_bucket(&self, origin: &Instant, bucket_size: &Duration) -> Duration {
@@ -10,9 +10,9 @@ impl DurationBucket for Instant {
         Duration::from_nanos(
             buckets * bucket_nanos
                 + match remainder.cmp(&(bucket_nanos / 2)) {
-                    std::cmp::Ordering::Less => 0,
-                    _ => bucket_nanos,
-                },
+                std::cmp::Ordering::Less => 0,
+                _ => bucket_nanos,
+            },
         )
     }
 }

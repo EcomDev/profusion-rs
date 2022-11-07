@@ -1,7 +1,8 @@
 use std::io::ErrorKind;
 
+use crate::time::{Duration, Instant};
+
 use super::{Event, EventProcessor, EventType};
-use crate::time::{cmp_instant_with_delta, Duration, Instant};
 
 static EVENT_DELTA: Duration = Duration::from_micros(500);
 
@@ -213,9 +214,11 @@ impl<T> From<(&'static str, Instant, Instant, &std::io::Result<T>)> for Event {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test_util::FakeProcessor;
     use std::time::{Duration, Instant};
+
+    use crate::test_util::FakeProcessor;
+
+    use super::*;
 
     static NANOSECOND: Duration = Duration::from_nanos(1);
 

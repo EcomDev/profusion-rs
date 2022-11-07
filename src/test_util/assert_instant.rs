@@ -1,6 +1,8 @@
 use std::cmp::Ordering;
-use super::*;
+
 use more_asserts::assert_le;
+
+use super::*;
 
 /// Asserts that both instances have difference not more then 200us
 pub fn assert_instant(actual: Instant, expected: Instant)
@@ -23,9 +25,10 @@ pub fn assert_instant_with_delta(actual: Instant, expected: Instant, delta: Dura
 mod tests
 {
     use std::time::Duration;
-    use crate::time::{Instant, InstantOffset};
+
     use crate::test_util::assert_instant;
     use crate::test_util::assert_instant::assert_instant_with_delta;
+    use crate::time::{Instant, InstantOffset};
 
     #[test]
     fn does_not_throw_any_panic_on_same_instants() {

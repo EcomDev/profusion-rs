@@ -2,6 +2,7 @@ use std::time::{Duration, Instant};
 
 use crate::executor::limit::{Limit, Limiter};
 
+///
 #[derive(Clone, Copy)]
 pub struct MaxDurationLimiter {
     start: Instant,
@@ -9,6 +10,29 @@ pub struct MaxDurationLimiter {
 }
 
 impl MaxDurationLimiter {
+    /// Creates a `MaxDurationLimiter` instance
+    ///
+    /// # Arguments
+    ///
+    /// * `max_duration`: time delay for internal limiter timer
+    ///
+    /// returns: MaxDurationLimiter
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::thread::sleep;
+    /// use profusion::prelude::*;
+    /// use profusion::test_util::RealtimeStatusStub;
+    /// use std::time::Duration;
+    ///
+    /// let limiter = MaxDurationLimiter::new(Duration::from_millis(10));
+    ///
+    /// sleep(Duration::from_millis(9));
+    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::None);
+    /// sleep(Duration::from_millis(2));
+    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::Shutdown);
+    /// ```
     pub fn new(max_duration: Duration) -> Self {
         Self {
             max_duration,
@@ -16,6 +40,33 @@ impl MaxDurationLimiter {
         }
     }
 
+    /// Adds delay to max duration limiter
+    ///
+    /// Shifts internal timer by provided delay
+    ///
+    /// # Arguments
+    ///
+    /// * `delay`: time delay for internal limiter timer
+    ///
+    /// returns: MaxDurationLimiter
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::thread::sleep;
+    /// use profusion::prelude::*;
+    /// use profusion::test_util::RealtimeStatusStub;
+    /// use std::time::Duration;
+    ///
+    /// let limiter = MaxDurationLimiter::new(Duration::from_millis(10))
+    ///     .with_delay(Duration::from_millis(5));
+    ///
+    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::None);
+    /// sleep(Duration::from_millis(11));
+    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::None);
+    /// sleep(Duration::from_millis(5));
+    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::Shutdown);
+    /// ```
     pub fn with_delay(self, delay: Duration) -> Self {
         Self {
             start: self.start + delay,

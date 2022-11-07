@@ -1,5 +1,5 @@
-use crate::time::*;
 use crate::EventProcessor;
+use crate::time::*;
 
 #[derive(Default)]
 pub struct FakeProcessor {
@@ -40,6 +40,7 @@ impl EventProcessor for FakeProcessor {
 mod tests
 {
     use std::time::{Duration, Instant};
+
     use crate::EventProcessor;
     use crate::test_util::FakeProcessor;
     use crate::time::InstantOffset;

@@ -1,15 +1,17 @@
 //! Tools to process load test results and recieve realtime information
 //! on its current status.
 
-mod aggregate;
-mod event;
-mod realtime;
-
 pub use aggregate::{
     AggregateBucket, AggregateEntry, AggregateEventProcessor,
     AggregateEventProcessorBuilder,
 };
 pub use realtime::RealtimeReport;
+
+use crate::time::Instant;
+
+mod aggregate;
+mod event;
+mod realtime;
 
 /// A type of event result during load test operation execution.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -40,8 +42,6 @@ pub struct Event {
     finished_at: Instant,
     kind: EventType,
 }
-
-use crate::time::Instant;
 
 /// Processor event
 pub trait EventProcessor {

@@ -1,18 +1,20 @@
-use super::future::MeasuredOutput;
-use crate::report::Event;
 use std::{future::Future, io::Result};
-
-mod closure;
-mod noop;
-mod sequence;
 
 pub use closure::ClosureStep;
 pub use noop::NoopStep;
 pub use sequence::SequenceStep;
 
+use crate::report::Event;
+
+use super::future::MeasuredOutput;
+
+mod closure;
+mod noop;
+mod sequence;
+
 pub trait ExecutionStep: Clone {
     type Item: Sized;
-    type Output: Future<Output = MeasuredOutput<Self::Item>>;
+    type Output: Future<Output=MeasuredOutput<Self::Item>>;
 
     /// Executes a step by creating a future with input as an argument
     fn execute(&self, events: Vec<Event>, input: Self::Item) -> Self::Output;
@@ -53,9 +55,9 @@ pub trait ExecutionStep: Clone {
         name: &'static str,
         closure: F,
     ) -> SequenceStep<Self, ClosureStep<Self::Item, F, Fut>>
-    where
-        F: Fn(Self::Item) -> Fut + Clone,
-        Fut: Future<Output = Result<Self::Item>>,
+        where
+            F: Fn(Self::Item) -> Fut + Clone,
+            Fut: Future<Output=Result<Self::Item>>,
     {
         SequenceStep::new(self, ClosureStep::new(name, closure))
     }

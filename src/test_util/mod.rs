@@ -1,15 +1,24 @@
+use std::time::{Duration, Instant};
+
+pub use assert_events::*;
+pub use assert_instant::*;
+pub use fake_processor::*;
+
+use super::RealtimeStatus;
+
 mod fake_processor;
 mod assert_instant;
 mod assert_events;
 
-use super::{report::EventProcessor, RealtimeStatus};
-use std::time::{Duration, Instant};
-use crate::time::cmp_instant_with_delta;
-
-pub use fake_processor::*;
-pub use assert_instant::*;
-pub use assert_events::*;
-
+/// Stub for [`RealtimeStatus`]
+///
+/// Allows testing custom implementation of [`Limiter`]
+///
+/// # Examples
+///
+///
+///
+/// [`Limiter`]: crate::Limiter
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RealtimeStatusStub {
     connections: usize,

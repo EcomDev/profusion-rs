@@ -1,10 +1,13 @@
-use super::*;
-use pin_project_lite::pin_project;
 use std::{
     pin::Pin,
-    task::{Context, Poll}
+    task::{Context, Poll},
 };
+
+use pin_project_lite::pin_project;
+
 use crate::time::Instant;
+
+use super::*;
 
 #[derive(Debug)]
 enum MeasuredFutureState {
@@ -70,8 +73,8 @@ pin_project! {
 }
 
 impl<T, F> MeasuredFuture<F>
-where
-    F: Future<Output = Result<T>>,
+    where
+        F: Future<Output=Result<T>>,
 {
     /// Creates `MeasuredFuture` with provided vector of Events
     pub fn new(name: &'static str, inner: F, events: Vec<Event>) -> Self {
@@ -83,8 +86,8 @@ where
 }
 
 impl<T, F> Future for MeasuredFuture<F>
-where
-    F: Future<Output = Result<T>>,
+    where
+        F: Future<Output=Result<T>>,
 {
     type Output = MeasuredOutput<T>;
 
@@ -114,14 +117,14 @@ where
 #[cfg(test)]
 mod tests {
     use std::io::ErrorKind;
-    use std::time::Duration;
+
     use crate::test_util::assert_events;
 
     use super::*;
 
     impl<T, F> MeasuredFuture<F>
-    where
-        F: Future<Output = Result<T>>,
+        where
+            F: Future<Output=Result<T>>,
     {
         fn empty(name: &'static str, inner: F) -> Self {
             Self::new(name, inner, Vec::new())
@@ -153,7 +156,7 @@ mod tests {
 
         assert_events(
             events,
-            vec![Event::success("one", Instant::now(), Instant::now())]
+            vec![Event::success("one", Instant::now(), Instant::now())],
         );
     }
 
@@ -176,8 +179,8 @@ mod tests {
             vec![Event::success(
                 "fast_future",
                 time,
-                time
-            )]
+                time,
+            )],
         );
     }
 
@@ -195,14 +198,14 @@ mod tests {
                 time,
             )],
         )
-        .await;
+            .await;
 
         assert_events(
             events,
             vec![
                 Event::success("another_event", time, time),
-                Event::success("fast_future", time, time)
-            ]
+                Event::success("fast_future", time, time),
+            ],
         );
     }
 
@@ -211,7 +214,7 @@ mod tests {
         let (_, result) = MeasuredFuture::empty("fast_future", async {
             Result::<u32>::Err(ErrorKind::InvalidInput.into())
         })
-        .await;
+            .await;
 
         assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidInput);
     }
@@ -221,14 +224,14 @@ mod tests {
         let (events, _) = MeasuredFuture::empty("timer_out", async {
             Result::<u32>::Err(ErrorKind::TimedOut.into())
         })
-        .await;
+            .await;
 
         let (events, _) = MeasuredFuture::new(
             "error_out",
             async { Result::<u32>::Err(ErrorKind::InvalidData.into()) },
             events,
         )
-        .await;
+            .await;
 
         let time = Instant::now();
         assert_events(
@@ -236,7 +239,7 @@ mod tests {
             vec![
                 Event::timeout("timer_out", time, time),
                 Event::error("error_out", time, time),
-            ]
+            ],
         );
     }
 }

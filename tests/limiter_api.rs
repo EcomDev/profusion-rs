@@ -1,12 +1,13 @@
+use std::time::Duration;
+
 use profusion::{
     executor::{ConcurrencyLimiter, Limit, Limiter},
     report::RealtimeStatus,
 };
 
-use std::time::Duration;
-
 #[derive(Debug, Clone, Copy)]
 struct LimiterStub(Limit);
+
 struct StatusStub(usize);
 
 impl RealtimeStatus for StatusStub {

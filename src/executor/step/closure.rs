@@ -1,7 +1,8 @@
 use std::{future::Future, io::Result, marker::PhantomData};
 
-use super::ExecutionStep;
 use crate::executor::future::MeasuredFuture;
+
+use super::ExecutionStep;
 
 pub struct ClosureStep<T, F, Fut> {
     name: &'static str,
@@ -11,8 +12,8 @@ pub struct ClosureStep<T, F, Fut> {
 }
 
 impl<T, F, Fut> Clone for ClosureStep<T, F, Fut>
-where
-    F: Clone,
+    where
+        F: Clone,
 {
     fn clone(&self) -> Self {
         Self {
@@ -25,9 +26,9 @@ where
 }
 
 impl<T, F, Fut> ClosureStep<T, F, Fut>
-where
-    F: Fn(T) -> Fut + Clone,
-    Fut: Future<Output = Result<T>>,
+    where
+        F: Fn(T) -> Fut + Clone,
+        Fut: Future<Output=Result<T>>,
 {
     pub fn new(name: &'static str, closure: F) -> Self {
         Self {
@@ -40,9 +41,9 @@ where
 }
 
 impl<T, F, Fut> ExecutionStep for ClosureStep<T, F, Fut>
-where
-    F: Fn(T) -> Fut + Clone,
-    Fut: Future<Output = Result<T>>,
+    where
+        F: Fn(T) -> Fut + Clone,
+        Fut: Future<Output=Result<T>>,
 {
     type Item = T;
 
@@ -90,7 +91,7 @@ mod tests {
             events,
             vec![
                 Event::success("success_event", Instant::now(), Instant::now())
-            ]
+            ],
         )
     }
 
@@ -117,7 +118,7 @@ mod tests {
 
         assert_events(
             events,
-            vec![Event::success("success_event", Instant::now(), Instant::now())]
+            vec![Event::success("success_event", Instant::now(), Instant::now())],
         )
     }
 }

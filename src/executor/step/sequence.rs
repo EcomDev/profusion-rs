@@ -9,9 +9,9 @@ pub struct SequenceStep<F, S> {
 }
 
 impl<T, F, S> SequenceStep<F, S>
-where
-    F: ExecutionStep<Item = T>,
-    S: ExecutionStep<Item = T>,
+    where
+        F: ExecutionStep<Item=T>,
+        S: ExecutionStep<Item=T>,
 {
     pub fn new(first: F, second: S) -> Self {
         Self { first, second }
@@ -19,10 +19,10 @@ where
 }
 
 impl<T, F, S> ExecutionStep for SequenceStep<F, S>
-where
-    F: ExecutionStep<Item = T>,
-    S: ExecutionStep<Item = T>,
-    T: Sized,
+    where
+        F: ExecutionStep<Item=T>,
+        S: ExecutionStep<Item=T>,
+        T: Sized,
 {
     type Item = T;
 
@@ -41,15 +41,16 @@ where
 mod tests {
     use std::{future::Ready, time::Instant};
 
-    use super::*;
     use crate::{
+        Event,
         executor::{
             future::MeasuredOutput,
             step::{ClosureStep, NoopStep},
         },
-        Event,
     };
     use crate::test_util::assert_events;
+
+    use super::*;
 
     #[tokio::test]
     async fn returns_result_from_first_step() {
@@ -90,7 +91,7 @@ mod tests {
             vec![
                 Event::success("first_call", time, time),
                 Event::success("second_call", time, time),
-            ]
+            ],
         );
     }
 

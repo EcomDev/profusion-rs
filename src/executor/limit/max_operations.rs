@@ -22,8 +22,9 @@ impl Limiter for MaxOperationsLimiter {
 
 #[cfg(test)]
 mod tests {
-    use super::{Limit, Limiter, MaxOperationsLimiter};
     use crate::test_util::RealtimeStatusStub;
+
+    use super::{Limit, Limiter, MaxOperationsLimiter};
 
     #[test]
     fn does_not_terminate_when_condition_is_not_reached() {

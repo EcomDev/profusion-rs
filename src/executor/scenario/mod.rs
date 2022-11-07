@@ -1,13 +1,20 @@
-mod step;
+/*
+ * Copyright © 2022. EcomDev B.V.
+ * All rights reserved.
+ * See LICENSE for license details.
+ */
 
-use crate::{Event, executor::future::MeasuredOutput};
 use std::future::Future;
 
-pub use step::{StepScenario, StepScenarioBuilder, SCENARIO_INITIALIZE, SCENARIO_STEP};
+pub use step::{SCENARIO_INITIALIZE, SCENARIO_STEP, StepScenario, StepScenarioBuilder};
+
+use crate::{Event, executor::future::MeasuredOutput};
+
+mod step;
 
 pub trait ScenarioBuilder {
     type Item: Sized;
-    type Scenario: Scenario<Item = Self::Item>;
+    type Scenario: Scenario<Item=Self::Item>;
 
     fn build(&self) -> Self::Scenario;
 }
@@ -15,9 +22,9 @@ pub trait ScenarioBuilder {
 pub trait Scenario {
     type Item: Sized;
 
-    type InitializeOutput: Future<Output = MeasuredOutput<Self::Item>>;
+    type InitializeOutput: Future<Output=MeasuredOutput<Self::Item>>;
 
-    type ExecuteOutput: Future<Output = MeasuredOutput<Self::Item>>;
+    type ExecuteOutput: Future<Output=MeasuredOutput<Self::Item>>;
 
     fn initialize(&self, events: Vec<Event>) -> Self::InitializeOutput;
 

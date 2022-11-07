@@ -3,9 +3,9 @@ use std::{
     collections::HashMap,
     time::{Duration, Instant},
 };
+use std::collections::hash_map::{Entry, Iter};
 
 use hdrhistogram::Histogram;
-use std::collections::hash_map::{Entry, Iter};
 
 use crate::{
     report::{EventProcessor, EventProcessorBuilder},
