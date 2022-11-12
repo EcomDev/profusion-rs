@@ -63,7 +63,7 @@ mod tests {
     use std::time::Instant;
 
     use crate::Event;
-    use crate::test_util::assert_events;
+    use crate::time::Clock;
 
     use super::*;
 
@@ -77,7 +77,7 @@ mod tests {
         assert_eq!(result.unwrap(), 9);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn executes_closure_and_reports_success_event() {
         let step =
             ClosureStep::new(
@@ -87,10 +87,10 @@ mod tests {
 
         let (events, _) = step.execute(Vec::new(), 42).await;
 
-        assert_events(
+        assert_eq!(
             events,
             vec![
-                Event::success("success_event", Instant::now(), Instant::now())
+                Event::success("success_event", Clock::now(), Clock::now())
             ],
         )
     }
@@ -106,7 +106,7 @@ mod tests {
         assert_eq!(step.capacity(), 1);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn allows_to_set_function_pointer_as_closure_step() {
         async fn calculate_answer(_: usize) -> Result<usize> {
             Ok(42)
@@ -116,9 +116,9 @@ mod tests {
 
         let (events, _) = step.execute(Vec::new(), 42).await;
 
-        assert_events(
+        assert_eq!(
             events,
-            vec![Event::success("success_event", Instant::now(), Instant::now())],
+            vec![Event::success("success_event", Clock::now(), Clock::now())],
         )
     }
 }

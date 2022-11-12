@@ -1,6 +1,7 @@
 use super::{Duration, DurationBucket, Instant, InstantOffset};
 
 impl DurationBucket for Instant {
+    #[inline]
     fn as_duration_bucket(&self, origin: &Instant, bucket_size: &Duration) -> Duration {
         let latency_nanos = (*self - *origin).as_nanos() as u64;
         let bucket_nanos = bucket_size.as_nanos() as u64;

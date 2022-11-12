@@ -17,6 +17,8 @@ use crate::{
 use super::MeasuredOutput;
 
 pin_project! {
+    /// Executes steps in sequential order
+    #[doc(hidden)]
     pub struct SequenceFuture <T, F, S>
     where
         F: ExecutionStep<Item=T>,
@@ -35,7 +37,7 @@ impl<T, F, S> SequenceFuture<T, F, S>
         F: ExecutionStep<Item=T>,
         S: ExecutionStep<Item=T>,
 {
-    pub fn new(events: Vec<Event>, value: T, first: F, second: S) -> Self {
+    pub(crate) fn new(events: Vec<Event>, value: T, first: F, second: S) -> Self {
         Self {
             first,
             second,
@@ -56,12 +58,9 @@ impl<T, F, S> Future for SequenceFuture<T, F, S>
         loop {
             let mut this = self.as_mut().project();
 
-            match this.args.take() {
-                Some((events, value)) => {
-                    this.future
-                        .set(EitherFuture::left(this.first.execute(events, value)));
-                }
-                None => {}
+            if let Some((events, value)) = this.args.take() {
+                this.future
+                    .set(EitherFuture::left(this.first.execute(events, value)));
             };
 
             let kind = this.future.kind();
@@ -90,9 +89,10 @@ impl<T, F, S> Future for SequenceFuture<T, F, S>
 #[cfg(test)]
 mod tests {
     use std::{io::ErrorKind, time::Instant, vec};
+    use std::time::Duration;
 
     use crate::executor::step::{ClosureStep, NoopStep};
-    use crate::test_util::assert_events;
+    use crate::time::{Clock, InstantOffset};
 
     use super::*;
 
@@ -124,28 +124,34 @@ mod tests {
         assert_eq!(result.unwrap(), 42)
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn measures_both_futures_executed() {
+        let reference = Clock::now();
         let step = SequenceFuture::new(
             Vec::new(),
             40,
-            ClosureStep::new("first_step", |value: usize| async move { Ok(value + 2) }),
-            ClosureStep::new("second_step", |value: usize| async move { Ok(value + 2) }),
+            ClosureStep::new("first_step", |value: usize| async move {
+                tokio::time::advance(Duration::from_millis(5)).await;
+                Ok(value + 2)
+            }),
+            ClosureStep::new("second_step", |value: usize| async move {
+                tokio::time::advance(Duration::from_millis(2)).await;
+                Ok(value + 2)
+            }),
         );
 
-        let time = Instant::now();
         let (events, _) = step.await;
 
-        assert_events(
+        assert_eq!(
             events,
             vec![
-                Event::success("first_step", time, time),
-                Event::success("second_step", time, time),
+                Event::success("first_step", reference, reference.with_millis(5)),
+                Event::success("second_step", reference.with_millis(5), reference.with_millis(7)),
             ],
         )
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn aborts_second_future_when_first_errors_out() {
         let step = SequenceFuture::new(
             Vec::new(),
@@ -156,12 +162,11 @@ mod tests {
             ClosureStep::new("second_step", |value: usize| async move { Ok(value + 2) }),
         );
 
-        let time = Instant::now();
         let (events, _) = step.await;
 
-        assert_events(
+        assert_eq!(
             events,
-            vec![Event::error("first_step", time, time)],
+            vec![Event::error("first_step", Clock::now(), Clock::now())],
         )
     }
 

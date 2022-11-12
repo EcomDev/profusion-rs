@@ -1,8 +1,12 @@
 use std::{future::Future, io::Result};
 
-pub use either::{EitherFuture, EitherFutureKind};
-pub use measured::MeasuredFuture;
-pub use sequence::SequenceFuture;
+pub use {
+    either::EitherFuture,
+    measured::MeasuredFuture,
+    sequence::SequenceFuture
+};
+
+pub(crate) use either::EitherFutureKind;
 
 use crate::report::Event;
 

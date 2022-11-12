@@ -38,7 +38,7 @@ mod tests {
     use std::time::Instant;
 
     use crate::Event;
-    use crate::test_util::assert_events;
+    use crate::time::Clock;
 
     use super::*;
 
@@ -50,21 +50,20 @@ mod tests {
         assert_eq!(result.unwrap(), 42);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn does_not_add_any_events() {
         let step = NoopStep::new();
-        let time = Instant::now();
 
         let (events, _) = step
             .execute(
-                vec![Event::success("one", time, time)],
+                vec![Event::success("one", Clock::now(), Clock::now())],
                 42,
             )
             .await;
 
-        assert_events(
+        assert_eq!(
             events,
-            vec![Event::success("one", time, time)],
+            vec![Event::success("one", Clock::now(), Clock::now())],
         );
     }
 

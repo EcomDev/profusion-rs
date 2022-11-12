@@ -1,11 +1,29 @@
 use super::{Limit, Limiter};
 
+/// Limiter that shuts down connections when limit of operations is reached
 #[derive(Clone, Copy)]
 pub struct MaxOperationsLimiter {
     max_operations: usize,
 }
 
 impl MaxOperationsLimiter {
+    /// Creates an instance of [`MaxOperationsLimiter`]
+    ///
+    /// # Arguments
+    ///
+    /// * `max_operations`: maximum number of operations after which to shutdown load test
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use profusion::prelude::*;
+    /// use profusion::test_util::RealtimeStatusStub;
+    ///
+    /// let limit = MaxOperationsLimiter::new(200);
+    ///
+    /// assert_eq!(limit.apply(&RealtimeStatusStub::with_total(199)), Limit::None);
+    /// assert_eq!(limit.apply(&RealtimeStatusStub::with_total(200)), Limit::Shutdown);
+    /// ```
     pub fn new(max_operations: usize) -> Self {
         Self { max_operations }
     }

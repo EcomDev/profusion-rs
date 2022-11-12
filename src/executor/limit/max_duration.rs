@@ -1,8 +1,8 @@
-use std::time::{Duration, Instant};
+use crate::time::{Duration, Instant, Clock};
 
 use crate::executor::limit::{Limit, Limiter};
 
-///
+/// Limiter that shuts down load test connections after time limit has been reached
 #[derive(Clone, Copy)]
 pub struct MaxDurationLimiter {
     start: Instant,
@@ -10,33 +10,33 @@ pub struct MaxDurationLimiter {
 }
 
 impl MaxDurationLimiter {
-    /// Creates a `MaxDurationLimiter` instance
+    /// Creates a [`MaxDurationLimiter`] instance
     ///
     /// # Arguments
     ///
     /// * `max_duration`: time delay for internal limiter timer
     ///
-    /// returns: MaxDurationLimiter
-    ///
     /// # Examples
     ///
     /// ```
-    /// use std::thread::sleep;
     /// use profusion::prelude::*;
     /// use profusion::test_util::RealtimeStatusStub;
     /// use std::time::Duration;
+    /// use tokio::time::advance;
     ///
-    /// let limiter = MaxDurationLimiter::new(Duration::from_millis(10));
-    ///
-    /// sleep(Duration::from_millis(9));
-    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::None);
-    /// sleep(Duration::from_millis(2));
-    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::Shutdown);
+    /// #[tokio::main(flavor = "current_thread", start_paused = true)]
+    /// async fn main() {
+    ///     let limiter = MaxDurationLimiter::new(Duration::from_millis(10));
+    ///     advance(Duration::from_millis(9)).await;
+    ///     assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::None);
+    ///     advance(Duration::from_millis(2)).await;
+    ///     assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::Shutdown);
+    /// }
     /// ```
     pub fn new(max_duration: Duration) -> Self {
         Self {
             max_duration,
-            start: Instant::now(),
+            start: Clock::now(),
         }
     }
 
@@ -48,28 +48,29 @@ impl MaxDurationLimiter {
     ///
     /// * `delay`: time delay for internal limiter timer
     ///
-    /// returns: MaxDurationLimiter
-    ///
     /// # Examples
     ///
     /// ```
-    /// use std::thread::sleep;
     /// use profusion::prelude::*;
     /// use profusion::test_util::RealtimeStatusStub;
     /// use std::time::Duration;
+    /// use tokio::time::advance;
     ///
-    /// let limiter = MaxDurationLimiter::new(Duration::from_millis(10))
-    ///     .with_delay(Duration::from_millis(5));
+    /// #[tokio::main(flavor = "current_thread", start_paused = true)]
+    /// async fn main() {
+    ///     let limiter = MaxDurationLimiter::new(Duration::from_millis(10))
+    ///         .with_delay(Duration::from_millis(5));
     ///
-    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::None);
-    /// sleep(Duration::from_millis(11));
-    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::None);
-    /// sleep(Duration::from_millis(5));
-    /// assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::Shutdown);
+    ///     assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::None);
+    ///     advance(Duration::from_millis(11)).await;
+    ///     assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::None);
+    ///     advance(Duration::from_millis(5)).await;
+    ///     assert_eq!(limiter.apply(&RealtimeStatusStub::default()), Limit::Shutdown);
+    /// }
     /// ```
     pub fn with_delay(self, delay: Duration) -> Self {
         Self {
-            start: self.start + delay,
+            max_duration: self.max_duration + delay,
             ..self
         }
     }
@@ -77,7 +78,7 @@ impl MaxDurationLimiter {
 
 impl Limiter for MaxDurationLimiter {
     fn apply<S: crate::RealtimeStatus>(&self, _status: &S) -> Limit {
-        match self.start.elapsed() > self.max_duration {
+        match Clock::now().duration_since(self.start) > self.max_duration {
             true => Limit::Shutdown,
             false => Limit::None,
         }

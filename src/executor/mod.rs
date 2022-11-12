@@ -1,6 +1,6 @@
 //! Load test executor
 
-pub use future::{EitherFuture, EitherFutureKind, MeasuredFuture, SequenceFuture};
+pub use future::{EitherFuture, MeasuredFuture, SequenceFuture};
 pub use limit::{
     ConcurrencyLimiter, Limit, Limiter, MaxDurationLimiter, MaxOperationsLimiter,
 };

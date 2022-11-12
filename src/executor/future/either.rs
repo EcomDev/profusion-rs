@@ -9,35 +9,29 @@ use pin_project_lite::pin_project;
 use super::*;
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum EitherFutureKind {
+pub(crate) enum EitherFutureKind {
     Empty,
     Left,
     Right,
 }
 
 pin_project! {
-    /// A combined future from two future types that resolve to the same [`MeasuredOutput<T>`][`crate::executor::future::MeasuredOutput`].
+    /// A combined future from two future types that resolve to the same [`MeasuredOutput<T>`].
     ///
     /// Main purpose of this future is to allows to write combinators for future builders.
-    /// ```
-    /// use profusion::executor::{EitherFuture, MeasuredFuture};
-    /// use profusion::report::Event;
-    /// use std::{future::Ready, io::Result};
     ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     let future = EitherFuture::<Ready<(Vec<Event>, Result<usize>)>, _>::right(MeasuredFuture::new("right", async { Ok(2) }, Vec::new()));
-    ///     let (_, result) = future.await;
-    ///     assert_eq!(result.unwrap(), 2);
-    /// }
-    /// ```
+    /// [`MeasuredOutput<T>`]: MeasuredOutput
     #[project = EitherFutureProj]
+    #[doc(hidden)]
     pub enum EitherFuture<L,R> {
+        /// Empty future, as a default state when no future execution started yet
         Empty,
+        /// First future variation
         Left {
             #[pin]
             inner: L
         },
+        /// Second future variation
         Right {
             #[pin]
             inner: R
@@ -51,21 +45,21 @@ impl<T, L, R> EitherFuture<L, R>
         R: Future<Output=MeasuredOutput<T>>,
 {
     /// Creates empty variant of the future
-    pub fn empty() -> Self {
+    pub(crate) fn empty() -> Self {
         Self::Empty
     }
 
     /// Creates left hand variant of the future
-    pub fn left(inner: L) -> Self {
+    pub(crate) fn left(inner: L) -> Self {
         Self::Left { inner }
     }
 
     /// Creates right hand variant of the future
-    pub fn right(inner: R) -> Self {
+    pub(crate) fn right(inner: R) -> Self {
         Self::Right { inner }
     }
 
-    pub fn kind(&self) -> EitherFutureKind {
+    pub(crate) fn kind(&self) -> EitherFutureKind {
         match self {
             Self::Left { .. } => EitherFutureKind::Left,
             Self::Right { .. } => EitherFutureKind::Right,
@@ -106,13 +100,13 @@ mod tests {
         time::Instant,
     };
 
-    use crate::test_util::assert_events;
+    use crate::time::Clock;
 
     use super::*;
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn polls_assigned_futures() {
-        let time = Instant::now();
+        let time = Clock::now();
 
         let (events, first_result) = EitherFuture::<_, Ready<(Vec<Event>, Result<usize>)>>::left(
             MeasuredFuture::new("left", async { Ok(1) }, vec![])
@@ -123,7 +117,7 @@ mod tests {
 
         let results: Vec<usize> = vec![first_result.unwrap(), second_result.unwrap()];
 
-        assert_events(
+        assert_eq!(
             events,
             vec![
                 Event::success("left", time, time),

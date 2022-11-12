@@ -117,40 +117,23 @@ impl<T, Step, Init, InitFut, StepFut> Scenario for StepScenario<T, Step, Init, I
 
 #[cfg(test)]
 mod tests {
-    use tokio::time::sleep;
+    use std::future;
+    use tokio::time;
 
     use crate::{
         report::Event,
         time::{Duration, Instant},
     };
-    use crate::test_util::assert_events;
-    use crate::time::InstantOffset;
+    use crate::time::{Clock, InstantOffset};
 
     use super::*;
 
-    async fn init() -> Result<usize> {
-        Ok(1)
-    }
-
-    async fn add_one(value: usize) -> Result<usize> {
-        Ok(value + 1)
-    }
-
-    async fn add_two(value: usize) -> Result<usize> {
-        Ok(value + 2)
-    }
-
-    async fn init_wait() -> Result<usize> {
-        sleep(Duration::from_millis(5)).await;
-        Ok(1)
-    }
-
     #[tokio::test]
     async fn executes_sequence_scenario() {
-        let builder = StepScenarioBuilder::new(init)
-            .with_step(add_one)
-            .with_step(add_two)
-            .with_step(add_one);
+        let builder = StepScenarioBuilder::new(|| future::ready(Ok(1)))
+            .with_step(|value| future::ready(Ok(value + 1)))
+            .with_step(|value| future::ready(Ok(value + 2)))
+            .with_step(|value| future::ready(Ok(value + 1)));
 
         let scenario = builder.build();
 
@@ -160,51 +143,57 @@ mod tests {
         assert_eq!(result.unwrap(), 5)
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused=true)]
     async fn accumulates_events_passed_argument() {
-        let builder = StepScenarioBuilder::new(init_wait)
+        let builder = StepScenarioBuilder::new(|| async move {
+                time::advance(Duration::from_millis(5)).await;
+                Ok(1)
+            })
             .with_step(|item| async move {
-                sleep(Duration::from_millis(2)).await;
+                time::advance(Duration::from_millis(3)).await;
                 Ok(item)
             })
             .with_step(|item| async move {
-                sleep(Duration::from_millis(4)).await;
+                time::advance(Duration::from_millis(5)).await;
                 Ok(item)
             })
             ;
 
         let scenario = builder.build();
         let events = vec![];
-        let time_reference = Instant::now();
+        let time_reference = Clock::now();
 
         let (events, _) = scenario.initialize(events).await;
         let (events, _) = scenario.execute(1, events).await;
 
-        assert_events(
+        assert_eq!(
             events,
             vec![
                 Event::success(SCENARIO_INITIALIZE, time_reference, time_reference.with_millis(5)),
                 Event::success(SCENARIO_STEP, time_reference.with_millis(5), time_reference.with_millis(8)),
-                Event::success(SCENARIO_STEP, time_reference.with_millis(8), time_reference.with_millis(12)),
+                Event::success(SCENARIO_STEP, time_reference.with_millis(8), time_reference.with_millis(13)),
             ],
         )
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused=true)]
     async fn measures_connection_timing() {
-        let builder = StepScenarioBuilder::new(init_wait);
+        let builder = StepScenarioBuilder::new(|| async move {
+            time::advance(Duration::from_millis(5)).await;
+            Ok(0)
+        });
 
         let scenario = builder.build();
-        let time = Instant::now();
+        let time = Clock::now();
         let events = Vec::with_capacity(1);
         let (events, _) = scenario.initialize(events).await;
 
-        assert_events(
+        assert_eq!(
             events,
             vec![Event::success(
                 SCENARIO_INITIALIZE,
                 time,
-                time.with_millis(6),
+                time.with_millis(5),
             )],
         );
     }

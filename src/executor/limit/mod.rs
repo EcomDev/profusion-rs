@@ -114,6 +114,7 @@ impl Limit {
 #[cfg(test)]
 mod tests {
     use std::time::{Duration, Instant};
+    use crate::time::Clock;
 
     use super::{ErrorKind, Limit};
 
@@ -121,11 +122,11 @@ mod tests {
     async fn delays_for_specified_duration_when_is_wait_limit() {
         let limit = Limit::Wait(Duration::from_millis(5));
 
-        let start = Instant::now();
+        let start = Clock::now();
 
         limit.process().await.unwrap();
 
-        let spend_time = start.elapsed();
+        let spend_time = Clock::now() - start;
 
         assert!(spend_time >= Duration::from_millis(5));
     }
@@ -143,11 +144,11 @@ mod tests {
     async fn immediately_continues_execution_when_no_limit_is_set() {
         let limit = Limit::None;
 
-        let start = Instant::now();
+        let start = Clock::now();
 
         limit.process().await.unwrap();
 
-        let elapsed = start.elapsed();
+        let elapsed = Clock::now() - start;
 
         assert!(elapsed < Duration::from_millis(1));
     }

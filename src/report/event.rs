@@ -21,14 +21,26 @@ impl Event {
         }
     }
 
+
     /// Creates a success event
     ///
-    /// ```rust
-    /// use profusion::{report::Event, report::EventType, time::Instant};
+    /// # Arguments
     ///
-    /// let event = Event::success("default", Instant::now(), Instant::now());
+    /// * `name`: event name by which it will be aggregated
+    /// * `started_at`: [`Instant`][`std::time::Instant`] when event has started
+    /// * `finished_at`: [`Instant`][`std::time::Instant`] when event has finished
+    ///
+    /// returns: Event
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use profusion::{report::Event, report::EventType, time::Clock};
+    ///
+    /// let event = Event::success("default", Clock::now(), Clock::now());
     /// assert_eq!(event.kind(), EventType::Success);
     /// ```
+    ///
     pub fn success(
         name: &'static str,
         started_at: Instant,
@@ -39,11 +51,16 @@ impl Event {
 
     /// Creates an error event
     ///
-    /// ```rust
-    /// use profusion::{report::Event, report::EventType, time::Instant};
+    /// # Arguments
     ///
-    /// let (start, end) = (Instant::now(), Instant::now());
-    /// let event = Event::error("default", start, end);
+    /// * `name`: event name by which it will be aggregated
+    /// * `started_at`: [`Instant`][`std::time::Instant`] when event has started
+    /// * `finished_at`: [`Instant`][`std::time::Instant`] when event has finished
+    ///
+    /// ```rust
+    /// use profusion::{report::Event, report::EventType, time::Clock};
+    ///
+    /// let event = Event::error("default", Clock::now(), Clock::now());
     /// assert_eq!(event.kind(), EventType::Error);
     /// ```
     pub fn error(name: &'static str, started_at: Instant, finished_at: Instant) -> Self {
@@ -51,6 +68,12 @@ impl Event {
     }
 
     /// Creates a timeout event
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: event name by which it will be aggregated
+    /// * `started_at`: [`Instant`][`std::time::Instant`] when event has started
+    /// * `finished_at`: [`Instant`][`std::time::Instant`] when event has finished
     ///
     /// ```rust
     /// use profusion::{report::Event, report::EventType, time::Instant};
@@ -66,16 +89,20 @@ impl Event {
         Self::new(name, started_at, finished_at, EventType::Timeout)
     }
 
-    /// Processes event data into supplied proccessor
+    /// Processes event data into supplied processor
+    ///
+    /// # Arguments
+    ///
+    /// * `processor`: [`EventProcessor`][`create::report::EventProcessor`] which should process the event
     ///
     /// ```rust
     /// use std::time::Duration;
     /// use profusion::{
-    ///     report::Event, report::EventType, time::Instant,
+    ///     report::Event, report::EventType, time::Clock,
     ///     report::AggregateEventProcessorBuilder, report::EventProcessorBuilder
     /// };
     ///
-    /// let event = Event::timeout("name", Instant::now(), Instant::now());
+    /// let event = Event::timeout("name", Clock::now(), Clock::now());
     /// let mut processor = AggregateEventProcessorBuilder::new().build();
     /// event.process(&mut processor);
     /// ```
@@ -97,12 +124,11 @@ impl Event {
     /// Calculates latency based on event time span
     ///
     /// ```rust
-    /// use profusion::{report::Event, report::EventType, time::Instant, time::Duration};
+    /// use profusion::{report::Event, report::EventType, time::Clock, time::Duration, time::InstantOffset};
     ///
-    /// let start = Instant::now();
-    /// let end = start + Duration::from_secs(1);
-    //
-    /// let event = Event::error("default", start, end);
+    /// let start = Clock::now();
+    ///
+    /// let event = Event::error("default", start, start.with_millis(1000));
     /// assert_eq!(event.latency(), Duration::from_secs(1));
     /// ```
     pub fn latency(&self) -> Duration {
@@ -112,11 +138,11 @@ impl Event {
     /// Returns instant when event has started
     ///
     /// ```rust
-    /// use profusion::{report::Event, report::EventType, time::Instant, time::Duration};
+    /// use profusion::{report::Event, report::EventType, time::Instant, time::Duration, time::InstantOffset};
     ///
     /// let start = Instant::now();
-    //
-    /// let event = Event::error("default", start, start + Duration::from_secs(4));
+    ///
+    /// let event = Event::error("default", start, start.with_millis(4000));
     /// assert_eq!(event.at(), start);
     /// ```
     pub fn at(&self) -> Instant {
@@ -127,9 +153,9 @@ impl Event {
     /// Type of the event that was captured
     ///
     /// ```rust
-    /// use profusion::{report::Event, report::EventType, time::Instant};
+    /// use profusion::{report::Event, report::EventType, time::Clock};
     ///
-    /// let event = Event::error("default", Instant::now(), Instant::now());
+    /// let event = Event::error("default", Clock::now(), Clock::now());
     /// assert_eq!(event.kind(), EventType::Error);
     /// ```
     pub fn kind(&self) -> EventType {
@@ -153,9 +179,9 @@ impl Event {
 /// Creates successful event from tuple of name and two `Instant` objects
 ///
 /// ```rust
-/// use profusion::{report::Event, report::EventType, time::Instant};
+/// use profusion::{report::Event, report::EventType, time::Clock};
 ///
-/// let event = Event::from(("custom_event_name", Instant::now(), Instant::now()));
+/// let event: Event = ("custom_event_name", Clock::now(), Clock::now()).into();
 /// assert_eq!(event.kind(), EventType::Success)
 /// ```
 impl From<(&'static str, Instant, Instant)> for Event {
@@ -169,7 +195,7 @@ impl From<(&'static str, Instant, Instant)> for Event {
 /// ```rust
 /// use profusion::{report::Event, time::Instant, time::Duration};
 ///
-/// let event = Event::from(("custom_event_name", Instant::now(), Duration::from_millis(100)));
+/// let event: Event = ("custom_event_name", Instant::now(), Duration::from_millis(100)).into();
 /// assert_eq!(event.latency(), Duration::from_millis(100))
 /// ```
 impl From<(&'static str, Instant, Duration)> for Event {
@@ -181,24 +207,26 @@ impl From<(&'static str, Instant, Duration)> for Event {
 /// Creates event based on IO result
 ///
 /// ```rust
-/// use profusion::{report::Event, report::EventType, time::Instant};
+/// use profusion::{report::Event, report::EventType, time::Clock};
 /// use std::io::{Result, Error, ErrorKind};
-/// use profusion::test_util::assert_events;
 ///
-/// let events: Vec<Event> = vec![
-///    ("timeout_event", Instant::now(), Instant::now(), &Result::<u32>::Err(Error::from(ErrorKind::TimedOut))).into(),
-///    ("error_event", Instant::now(), Instant::now(), &Result::<u32>::Err(Error::from(ErrorKind::AddrInUse))).into(),
-///    ("success_event", Instant::now(), Instant::now(), &Result::<u32>::Ok(123)).into()
-/// ];
+/// #[tokio::main(flavor = "current_thread", start_paused = true)]
+/// async fn main() {
+///     let events: Vec<Event> = vec![
+///         ("timeout_event", Clock::now(), Clock::now(), &Result::<usize>::Err(Error::from(ErrorKind::TimedOut))).into(),
+///         ("error_event", Clock::now(), Clock::now(), &Result::<usize>::Err(Error::from(ErrorKind::AddrInUse))).into(),
+///         ("success_event", Clock::now(), Clock::now(), &Result::<usize>::Ok(123)).into()
+///     ];
 ///
-/// assert_events(
-///     events,
-///     vec![
-///         Event::timeout("timeout_event", Instant::now(), Instant::now()),    
-///         Event::error("error_event", Instant::now(), Instant::now()),
-///         Event::success("success_event", Instant::now(), Instant::now()),
-///     ]
-/// );
+///     assert_eq!(
+///         events,
+///         vec![
+///             Event::timeout("timeout_event", Clock::now(), Clock::now()),
+///             Event::error("error_event", Clock::now(), Clock::now()),
+///             Event::success("success_event", Clock::now(), Clock::now()),
+///         ]
+///     );
+/// }
 /// ```
 impl<T> From<(&'static str, Instant, Instant, &std::io::Result<T>)> for Event {
     fn from(value: (&'static str, Instant, Instant, &std::io::Result<T>)) -> Self {

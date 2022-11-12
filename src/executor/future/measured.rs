@@ -5,7 +5,7 @@ use std::{
 
 use pin_project_lite::pin_project;
 
-use crate::time::Instant;
+use crate::time::{Instant, Clock};
 
 use super::*;
 
@@ -20,7 +20,7 @@ impl MeasuredFutureState {
     fn start_timer(&mut self) {
         match self {
             Self::Ready(name, events) => {
-                *self = Self::Running(name, std::mem::take(events), Instant::now());
+                *self = Self::Running(name, std::mem::take(events), Clock::now());
             }
             _ => unreachable!(),
         }
@@ -29,7 +29,7 @@ impl MeasuredFutureState {
     fn finish_timer<T>(&mut self, result: &Result<T>) -> Vec<Event> {
         match self {
             Self::Running(name, events, start) => {
-                events.push((*name, *start, Instant::now(), result).into());
+                events.push((*name, *start, Clock::now(), result).into());
                 let events = std::mem::take(events);
                 *self = Self::Complete;
                 events
@@ -40,31 +40,8 @@ impl MeasuredFutureState {
 }
 
 pin_project! {
-    /// Measures execution time and result type of underlying [inner][`std::future::Future`] future.
-    ///
-    /// Result of the measurement is as an [Event][`crate::report::Event`] appeneded to a vector passed as an argument.
-    /// ```
-    /// use profusion::{report::Event, executor::MeasuredFuture, test_util::assert_events};
-    /// use std::time::Instant;
-    ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     let  time = Instant::now();
-    ///     let (events, _) = MeasuredFuture::new(
-    ///        "one_plus_one",
-    ///        async { Ok(1 + 1) },
-    ///        vec![Event::success("another_event", time, time)]
-    ///    ).await;
-    ///
-    ///    assert_events(
-    ///        events,
-    ///        vec![
-    ///            Event::success("another_event", time, time),
-    ///            Event::success("one_plus_one", time, time)
-    ///       ]
-    ///    );
-    /// }
-    /// ```
+    /// Wraps async code into measured code block
+    #[doc(hidden)]
     pub struct MeasuredFuture<F> {
         #[pin]
         inner: F,
@@ -77,7 +54,7 @@ impl<T, F> MeasuredFuture<F>
         F: Future<Output=Result<T>>,
 {
     /// Creates `MeasuredFuture` with provided vector of Events
-    pub fn new(name: &'static str, inner: F, events: Vec<Event>) -> Self {
+    pub(crate) fn new(name: &'static str, inner: F, events: Vec<Event>) -> Self {
         Self {
             inner,
             state: MeasuredFutureState::Ready(name, events),
@@ -117,8 +94,8 @@ impl<T, F> Future for MeasuredFuture<F>
 #[cfg(test)]
 mod tests {
     use std::io::ErrorKind;
-
-    use crate::test_util::assert_events;
+    use std::time::Duration;
+    use crate::time::InstantOffset;
 
     use super::*;
 
@@ -149,14 +126,14 @@ mod tests {
         assert!(matches!(state, MeasuredFutureState::Complete));
     }
 
-    #[test]
-    fn records_event_with_running_state_on_finishing() {
-        let mut state = MeasuredFutureState::Running("one", Vec::new(), Instant::now());
+    #[tokio::test(start_paused = true)]
+    async fn records_event_with_running_state_on_finishing() {
+        let mut state = MeasuredFutureState::Running("one", Vec::new(), Clock::now());
         let events = state.finish_timer(&Ok(1));
 
-        assert_events(
+        assert_eq!(
             events,
-            vec![Event::success("one", Instant::now(), Instant::now())],
+            vec![Event::success("one", Clock::now(), Clock::now())],
         );
     }
 
@@ -168,43 +145,39 @@ mod tests {
         assert_eq!(result.unwrap(), 2);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn returns_event_based_on_underlying_future_execution() {
         let (events, _) = MeasuredFuture::empty("fast_future", async { Ok(1 + 1) }).await;
 
-        let time = Instant::now();
-
-        assert_events(
+        assert_eq!(
             events,
             vec![Event::success(
                 "fast_future",
-                time,
-                time,
+                Clock::now(),
+                Clock::now(),
             )],
         );
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn appends_to_existings_events_after_execution() {
         let future = || async { Ok(1 + 1) };
-        let time = Instant::now();
 
         let (events, _) = MeasuredFuture::new(
             "fast_future",
             future(),
             vec![Event::success(
                 "another_event",
-                time,
-                time,
+                Clock::now(),
+                Clock::now(),
             )],
-        )
-            .await;
+        ).await;
 
-        assert_events(
+        assert_eq!(
             events,
             vec![
-                Event::success("another_event", time, time),
-                Event::success("fast_future", time, time),
+                Event::success("another_event", Clock::now(), Clock::now()),
+                Event::success("fast_future", Clock::now(), Clock::now()),
             ],
         );
     }
@@ -219,7 +192,7 @@ mod tests {
         assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidInput);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn reports_error_events() {
         let (events, _) = MeasuredFuture::empty("timer_out", async {
             Result::<u32>::Err(ErrorKind::TimedOut.into())
@@ -233,13 +206,36 @@ mod tests {
         )
             .await;
 
-        let time = Instant::now();
-        assert_events(
+        assert_eq!(
             events,
             vec![
-                Event::timeout("timer_out", time, time),
-                Event::error("error_out", time, time),
+                Event::timeout("timer_out", Clock::now(), Clock::now()),
+                Event::error("error_out", Clock::now(), Clock::now()),
             ],
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn measures_time_spend_by_feature() {
+        let reference = Clock::now();
+        let (events, _) = MeasuredFuture::new(
+            "answer_to_everything",
+            async {
+                tokio::time::advance(Duration::from_secs(7_500_000)).await;
+                Ok(42)
+            },
+            vec![],
+        ).await;
+
+        assert_eq!(
+            events,
+            vec![
+                Event::success(
+                    "answer_to_everything",
+                    reference,
+                    reference.with_millis(7_500_000_000)
+                )
+            ]
+        )
     }
 }

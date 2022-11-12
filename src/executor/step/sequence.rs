@@ -2,6 +2,26 @@ use crate::executor::future::SequenceFuture;
 
 use super::ExecutionStep;
 
+/// Sequence execution step
+///
+/// Allows to chain multiple execution steps together. It is
+/// implicitly created when [`ExecutionStep::step`] is invoked
+///
+/// # Example
+/// ```
+/// use profusion::prelude::*;
+///
+/// let step = SequenceStep::new(
+///    SequenceStep::new(
+///         ClosureStep::new("first_call", |item: usize| async move { Ok(item) }),
+///         ClosureStep::new("second_call", |item: usize| async move { Ok(item) }),
+///    ),
+///    ClosureStep::new("third_call", |item: usize| async move { Ok(item) }),
+/// );
+///
+/// assert_eq!(step.capacity(), 3);
+/// ```
+///
 #[derive(Clone)]
 pub struct SequenceStep<F, S> {
     first: F,
@@ -48,7 +68,7 @@ mod tests {
             step::{ClosureStep, NoopStep},
         },
     };
-    use crate::test_util::assert_events;
+    use crate::time::Clock;
 
     use super::*;
 
@@ -76,21 +96,20 @@ mod tests {
         assert_eq!(result.unwrap(), 10);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn report_completed_steps_as_events() {
         let step = SequenceStep::new(
-            ClosureStep::new("first_call", |item: usize| async move { Ok(item) }),
-            ClosureStep::new("second_call", |item: usize| async move { Ok(item) }),
+            ClosureStep::new("first", |item: usize| async move { Ok(item) }),
+            ClosureStep::new("second", |item: usize| async move { Ok(item) }),
         );
 
-        let time = Instant::now();
         let (events, _) = step.execute(Vec::new(), 1).await;
 
-        assert_events(
+        assert_eq!(
             events,
             vec![
-                Event::success("first_call", time, time),
-                Event::success("second_call", time, time),
+                Event::success("first", Clock::now(), Clock::now()),
+                Event::success("second", Clock::now(), Clock::now()),
             ],
         );
     }

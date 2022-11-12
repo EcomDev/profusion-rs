@@ -1,5 +1,6 @@
 use super::{Duration, Limit, Limiter};
 
+/// Limiter that applies delay for operations to throttle execution
 #[derive(Clone, Copy)]
 pub struct ConcurrencyLimiter {
     max_concurrency: usize,
@@ -7,19 +8,24 @@ pub struct ConcurrencyLimiter {
 }
 
 impl ConcurrencyLimiter {
-    ///
+    /// Creates [`ConcurrencyLimiter`] with provided attributes
     ///
     /// # Arguments
     ///
-    /// * `max_concurrency`:
-    /// * `wait_for`:
-    ///
-    /// returns: ConcurrencyLimiter
+    /// * `max_concurrency`: Maximum concurrent operations after which new operations will be delayed
+    /// * `wait_for`: Delay for new operation when concurrency is reached
     ///
     /// # Examples
     ///
     /// ```
+    /// use std::time::Duration;
+    /// use profusion::prelude::*;
+    /// use profusion::test_util::RealtimeStatusStub;
     ///
+    /// let limiter = ConcurrencyLimiter::new(20, Duration::from_millis(5));
+    /// let status = RealtimeStatusStub::with_operations(25);
+    ///
+    /// assert_eq!(limiter.apply(&status), Limit::Wait(Duration::from_millis(5)));
     /// ```
     pub fn new(max_concurrency: usize, wait_for: Duration) -> Self {
         Self {
