@@ -11,7 +11,7 @@ name = "profusion"
 crate-type = ["lib"]
 
 [dependencies]
-tokio = { version = "1", features = ["rt", "time", "macros"] }
+tokio = { version = "1", features = ["rt", "time", "macros", "test-util"] }
 pin-project-lite = "0.2"
 hdrhistogram = "7"
 more-asserts = { version = "0.3", optional = true }
@@ -20,7 +20,7 @@ more-asserts = { version = "0.3", optional = true }
 loom = "0.5"
 itertools = "0.10.3"
 criterion = "0.3"
-tokio = { version = "1", features = ["rt", "time", "macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["rt", "time", "macros", "rt-multi-thread", "test-util"] }
 
 [features]
 default = ["test"]

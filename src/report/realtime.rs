@@ -21,20 +21,14 @@ const COUNTER_STEP: usize = 1;
 
 impl Counter {
     fn increment(&self) {
-        match self.0.fetch_add(COUNTER_STEP, Ordering::Relaxed) {
-            usize::MAX => {
-                self.0.fetch_sub(COUNTER_STEP, Ordering::Relaxed);
-            }
-            _ => (),
+        if self.0.fetch_add(COUNTER_STEP, Ordering::Relaxed) == usize::MAX {
+            self.0.fetch_sub(COUNTER_STEP, Ordering::Relaxed);
         }
     }
 
     fn decrement(&self) {
-        match self.0.fetch_sub(COUNTER_STEP, Ordering::Relaxed) {
-            usize::MIN => {
-                self.0.fetch_add(COUNTER_STEP, Ordering::Relaxed);
-            }
-            _ => (),
+        if self.0.fetch_sub(COUNTER_STEP, Ordering::Relaxed) == usize::MIN {
+            self.0.fetch_add(COUNTER_STEP, Ordering::Relaxed);
         }
     }
 
@@ -43,21 +37,14 @@ impl Counter {
     }
 }
 
-#[derive(Debug, Clone)]
+/// Default reporter and status implementation
+///
+/// Uses atomic counters in order to facilitate lock-free multi-threaded accuracy
+#[derive(Debug, Clone, Default)]
 pub struct RealtimeReport {
     operations: Counter,
     connections: Counter,
     total_operations: Counter,
-}
-
-impl Default for RealtimeReport {
-    fn default() -> Self {
-        Self {
-            operations: Counter::default(),
-            connections: Counter::default(),
-            total_operations: Counter::default(),
-        }
-    }
 }
 
 impl RealtimeReporter for RealtimeReport {

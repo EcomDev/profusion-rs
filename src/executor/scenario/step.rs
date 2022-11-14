@@ -5,9 +5,13 @@ use crate::{Event, executor::{
     scenario::{Scenario, ScenarioBuilder},
 }, prelude::{ClosureStep, ExecutionStep, NoopStep, SequenceStep}};
 
+/// Default name for scenario initialization process
 pub const SCENARIO_INITIALIZE: &'static str = "scenario::initialize";
+
+/// Default name for scenario step, custom name can be supplied via [``]
 pub const SCENARIO_STEP: &'static str = "scenario::step";
 
+/// Builder for [`StepScenario`]
 pub struct StepScenarioBuilder<T, Step, Init, InitFut> {
     initialize: Init,
     step: Step,
@@ -15,6 +19,7 @@ pub struct StepScenarioBuilder<T, Step, Init, InitFut> {
     _init_future: PhantomData<InitFut>,
 }
 
+/// Step scenario
 pub struct StepScenario<T, Step, Init, InitFut> {
     initialize: Init,
     step: Step,
@@ -122,7 +127,7 @@ mod tests {
 
     use crate::{
         report::Event,
-        time::{Duration, Instant},
+        time::Duration,
     };
     use crate::time::{Clock, InstantOffset};
 
