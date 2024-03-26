@@ -1,94 +1,145 @@
-use std::time::{Duration, Instant};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use hdrhistogram::Histogram;
+use smallvec::SmallVec;
+use std::{collections::HashMap, fmt::Debug, future::Future, hash::Hash, time::Duration};
+use tokio::{runtime::Builder, time::Instant};
 
-use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
-
-use profusion::{
-    EventProcessor,
-    report::{
-        AggregateEventProcessor, AggregateEventProcessorBuilder, Event,
-        EventProcessorBuilder,
-    },
-};
-
-fn measure_record(c: &mut Criterion) {
-    let time_now = Instant::now();
-    let builder = AggregateEventProcessorBuilder::new()
-        .with_span(Duration::from_millis(50))
-        .with_time(time_now);
-
-    let mut group = c.benchmark_group("record");
-
-    [10u64, 100, 1000, 10000].iter().for_each(|size| {
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &builder,
-            |b, builder| {
-                b.iter_batched(
-                    || list_of_events(*size, time_now),
-                    |events| populate_aggregate(builder, events),
-                    BatchSize::SmallInput,
-                );
-            },
-        );
-    });
+#[derive(Hash, PartialEq, Eq, Debug, Default)]
+enum TestMetric {
+    #[default]
+    OneValue,
+    TwoValue,
 }
 
-fn populate_aggregate(
-    builder: &AggregateEventProcessorBuilder,
-    events: Vec<Event>,
-) -> AggregateEventProcessor {
-    let mut aggregate = builder.build();
-    events
-        .iter()
-        .for_each(|event| event.process(&mut aggregate));
-    aggregate
+trait Metric: Hash + PartialEq + Eq + Debug {
+    fn name(&self) -> &'static str;
 }
 
-fn list_of_events(size: u64, time: Instant) -> Vec<Event> {
-    (0..size)
-        .map(|index| {
-            let (start, end) = (
-                time + Duration::from_millis(index * 50),
-                time + Duration::from_millis(index * 50 + index % 10),
-            );
-            match index % 6 {
-                0..=2 => Event::success("one", start, end),
-                3..=3 => Event::success("two", start, end),
-                4..=4 => Event::error("two", start, end),
-                5..=5 => Event::timeout("one", start, end),
-                _ => Event::timeout("two", start, end),
+impl Metric for TestMetric {
+    fn name(&self) -> &'static str {
+        match self {
+            Self::OneValue => "one_value",
+            Self::TwoValue => "two_value",
+        }
+    }
+}
+
+trait MetricRecorder {
+    type Metric: Metric;
+
+    async fn record<T>(
+        &mut self,
+        metric: Self::Metric,
+        action: impl Future<Output = T>,
+    ) -> T;
+}
+
+async fn async_action(recorder: &mut impl MetricRecorder<Metric = TestMetric>) {
+    recorder.record(TestMetric::OneValue, async { 1 + 2 }).await;
+    recorder.record(TestMetric::TwoValue, async { 2 + 2 }).await;
+    recorder.record(TestMetric::OneValue, async { 4 + 2 }).await;
+    recorder.record(TestMetric::TwoValue, async { 5 + 2 }).await;
+}
+
+#[derive(Default)]
+struct MetricStorage<M: Metric> {
+    values: HashMap<M, Histogram<u64>>,
+}
+
+#[derive(Default)]
+struct AccumulatorRecorder<M: Metric> {
+    accumulator: MetricStorage<M>,
+}
+
+#[derive(Default)]
+struct FlusherRecorder<M: Metric> {
+    events: SmallVec<[(M, Duration); 32]>,
+}
+
+impl<M: Metric> MetricRecorder for AccumulatorRecorder<M> {
+    type Metric = M;
+
+    async fn record<T>(&mut self, metric: M, action: impl Future<Output = T>) -> T {
+        let started = Instant::now();
+        let result = action.await;
+        let end = started.elapsed();
+        let values = self
+            .accumulator
+            .values
+            .entry(metric)
+            .or_insert_with(|| Histogram::new(3).unwrap());
+
+        values
+            .record(end.as_secs() * 1_000_000_000 + end.subsec_nanos() as u64)
+            .unwrap();
+        result
+    }
+}
+
+impl<M: Metric> MetricRecorder for FlusherRecorder<M> {
+    type Metric = M;
+
+    async fn record<T>(&mut self, metric: M, action: impl Future<Output = T>) -> T {
+        let started = Instant::now();
+        let result = action.await;
+        let end = started.elapsed();
+        self.events.push((metric, end));
+        result
+    }
+}
+
+impl<M: Metric> FlusherRecorder<M> {
+    pub fn flush(&mut self, storage: &mut MetricStorage<M>) {
+        self.events.drain(..).for_each(|(metric, duration)| {
+            let values = storage
+                .values
+                .entry(metric)
+                .or_insert_with(|| Histogram::new(3).unwrap());
+
+            values
+                .record(
+                    duration.as_secs() * 1_000_000_000 + duration.subsec_nanos() as u64,
+                )
+                .unwrap();
+        });
+    }
+}
+
+fn criterion_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("measure_performance");
+    let values = black_box(0..2000);
+
+    group.bench_with_input("accumulator", &values, |bench, values| {
+        let runtime = Builder::new_current_thread()
+            .start_paused(true)
+            .build()
+            .unwrap();
+
+        bench.to_async(runtime).iter(|| async move {
+            let mut recorder = AccumulatorRecorder::default();
+            for _ in values.clone().into_iter() {
+                async_action(&mut recorder).await;
             }
-        })
-        .collect()
-}
+        });
+    });
 
-fn measure_merge(c: &mut Criterion) {
-    let time_now = Instant::now();
-    let builder = AggregateEventProcessorBuilder::new()
-        .with_span(Duration::from_millis(50))
-        .with_time(time_now);
+    group.bench_with_input("flusher", &values, |bench, values| {
+        let runtime = Builder::new_current_thread()
+            .start_paused(true)
+            .build()
+            .unwrap();
 
-    let mut group = c.benchmark_group("merge");
+        bench.to_async(runtime).iter(|| async move {
+            let mut recorder = FlusherRecorder::default();
+            for _ in values.clone().into_iter() {
+                async_action(&mut recorder).await;
+            }
 
-    [10u64, 100, 1000, 10000].iter().for_each(|size| {
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &builder,
-            |b, builder| {
-                b.iter_batched(
-                    || {
-                        (
-                            populate_aggregate(builder, list_of_events(*size, time_now)),
-                            populate_aggregate(builder, list_of_events(*size, time_now)),
-                        )
-                    },
-                    |(mut left, right)| left.merge(right),
-                    BatchSize::SmallInput,
-                );
-            },
-        );
+            let mut storage = MetricStorage::default();
+            recorder.flush(&mut storage);
+        });
     });
 }
 
-criterion_group!(aggregate_bench, measure_record, measure_merge);
-criterion_main!(aggregate_bench);
+criterion_group!(benches, criterion_benchmark);
+criterion_main!(benches);

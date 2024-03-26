@@ -5,6 +5,7 @@ authors = ["Ivan Chepurnyi <ivan.chepurnyi@ecomdev.org>"]
 edition = "2021"
 repository = "https://github.com/EcomDev/profusion-rs"
 license = "MIT"
+rust-version = "1.77.0"
 
 [lib]
 name = "profusion"
@@ -14,17 +15,15 @@ crate-type = ["lib"]
 tokio = { version = "1", features = ["rt", "time", "macros", "test-util"] }
 pin-project-lite = "0.2"
 hdrhistogram = "7"
-more-asserts = { version = "0.3", optional = true }
+thiserror = "1"
+smallvec = "1"
+trait-variant = "0.1.2"
 
 [dev-dependencies]
-loom = "0.5"
-itertools = "0.10.3"
-criterion = "0.3"
+loom = "0.7"
+itertools = "0.12"
+criterion = { version = "0.5", features = ["default", "async_tokio"] }
 tokio = { version = "1", features = ["rt", "time", "macros", "rt-multi-thread", "test-util"] }
-
-[features]
-default = ["test"]
-test = ["more-asserts"]
 
 [profile.release]
 opt-level = 3
