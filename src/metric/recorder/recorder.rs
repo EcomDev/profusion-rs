@@ -87,8 +87,10 @@ where
 #[cfg(test)]
 mod tests {
     use crate::metric::{
-        recorder::recorder::MetricRecorder, Metric, MetricRecordError, MetricReporter,
+        recorder::recorder::MetricRecorder, Metric, MetricRecordError,
+        MetricReporterBuilder, TestReporterBuilder,
     };
+
     use std::{fmt::Debug, hash::Hash, io::ErrorKind, time::Duration};
     use tokio::{task::yield_now, time::advance};
 
@@ -107,31 +109,9 @@ mod tests {
         }
     }
 
-    #[derive(Default)]
-    struct TestReporter {
-        values: Vec<(TestMetric, Duration, bool)>,
-    }
-
-    impl MetricReporter for TestReporter {
-        type Metric = TestMetric;
-
-        fn add_entry(
-            &mut self,
-            metric: Self::Metric,
-            elapsed: Duration,
-            error: Option<&MetricRecordError>,
-        ) {
-            self.values.push((metric, elapsed, error.is_some()))
-        }
-
-        fn aggregate_into(mut self, other: &mut Self) {
-            other.values.append(&mut self.values);
-        }
-    }
-
     #[tokio::test(start_paused = true)]
     async fn records_measurements_from_future_without_return_value() {
-        let mut recorder = MetricRecorder::new(TestReporter::default());
+        let mut recorder = MetricRecorder::new(TestReporterBuilder::new().build());
 
         recorder
             .record(TestMetric::MetricOne, async {
@@ -152,14 +132,14 @@ mod tests {
                 (TestMetric::MetricOne, Duration::from_millis(30), false),
                 (TestMetric::MetricTwo, Duration::from_millis(20), false),
             ],
-            recorder.reporter.values
+            recorder.reporter.values()
         )
     }
 
     #[tokio::test(start_paused = true)]
     async fn reports_timeout_error_when_timeout_is_specified() {
         let mut recorder = MetricRecorder::with_timeout(
-            TestReporter::default(),
+            TestReporterBuilder::new().build(),
             Duration::from_millis(10),
         );
 
@@ -176,14 +156,14 @@ mod tests {
 
         assert_eq!(
             vec![(TestMetric::MetricOne, Duration::from_millis(10), true)],
-            recorder.reporter.values,
+            recorder.reporter.values(),
             "recorded metric contains error flag and equal to timeout value"
         );
     }
 
     #[tokio::test]
     async fn returns_result_of_a_run() {
-        let mut recorder = MetricRecorder::new(TestReporter::default());
+        let mut recorder = MetricRecorder::new(TestReporterBuilder::new().build());
 
         let result = recorder.record(TestMetric::MetricOne, async { 1 }).await;
 
@@ -192,7 +172,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn records_successful_measurement_on_each_try_record() {
-        let mut recorder = MetricRecorder::new(TestReporter::default());
+        let mut recorder = MetricRecorder::new(TestReporterBuilder::new().build());
 
         recorder
             .try_record(TestMetric::MetricOne, async {
@@ -215,13 +195,13 @@ mod tests {
                 (TestMetric::MetricOne, Duration::from_millis(5), false),
                 (TestMetric::MetricTwo, Duration::from_millis(5), false),
             ],
-            recorder.reporter.values
+            recorder.reporter.values()
         )
     }
 
     #[tokio::test(start_paused = true)]
     async fn records_errors_when_try_records() {
-        let mut recorder = MetricRecorder::new(TestReporter::default());
+        let mut recorder = MetricRecorder::new(TestReporterBuilder::new().build());
 
         recorder
             .try_record(TestMetric::MetricOne, async {
@@ -244,13 +224,13 @@ mod tests {
                 (TestMetric::MetricOne, Duration::from_millis(5), true),
                 (TestMetric::MetricTwo, Duration::from_millis(5), true),
             ],
-            recorder.reporter.values
+            recorder.reporter.values()
         )
     }
 
     #[tokio::test(start_paused = true)]
     async fn records_latencies_passed_manually() {
-        let mut recorder = MetricRecorder::new(TestReporter::default());
+        let mut recorder = MetricRecorder::new(TestReporterBuilder::new().build());
 
         recorder.record_latency(
             TestMetric::MetricOne,
@@ -265,7 +245,7 @@ mod tests {
                 (TestMetric::MetricOne, Duration::from_millis(6), true),
                 (TestMetric::MetricTwo, Duration::from_millis(1), false),
             ],
-            recorder.reporter.values
+            recorder.reporter.values()
         )
     }
 }

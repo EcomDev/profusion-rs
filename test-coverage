@@ -6,11 +6,11 @@ rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR/coverage/html
 mkdir -p $OUTPUT_DIR/profiles
 
-export RUSTC_BOOTSTRAP=1 RUSTFLAGS="-Zinstrument-coverage -Copt-level=0 -Clink-dead-code"
-cargo build
+export RUSTC_BOOTSTRAP=1 RUSTFLAGS="-Cinstrument-coverage -Clink-dead-code -Copt-level=0"
 export LLVM_PROFILE_FILE="$OUTPUT_DIR/profiles/coverage-%p-%m.profraw"
+
+cargo build
 cargo test --lib
-cargo test --test "*"
 cargo test --doc
 grcov $OUTPUT_DIR/profiles --source-dir . --binary-path ./target/debug/ -t lcov --ignore "/*" --ignore "*test*" --ignore-not-existing --llvm -o  $OUTPUT_DIR/coverage/lcov.info
 grcov $OUTPUT_DIR/profiles --source-dir . --binary-path ./target/debug/ -t html --ignore "/*" --ignore "*test*" --ignore-not-existing --llvm -o  $OUTPUT_DIR/coverage/html

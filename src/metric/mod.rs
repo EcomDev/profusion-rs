@@ -8,6 +8,9 @@ pub use error::*;
 pub use recorder::*;
 pub use reporter::*;
 
+#[cfg(any(feature = "test_util", test))]
+pub use reporter::TestReporter;
+
 pub trait Metric: Hash + PartialEq + Eq {
     fn name(&self) -> &'static str;
 }

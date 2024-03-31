@@ -1,3 +1,9 @@
+#[cfg(any(feature = "test_util", test))]
+mod test_reporter;
+
+#[cfg(any(feature = "test_util", test))]
+pub use test_reporter::{TestReporter, TestReporterBuilder};
+
 use crate::metric::{Metric, MetricRecordError};
 use std::time::Duration;
 
