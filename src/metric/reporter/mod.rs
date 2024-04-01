@@ -1,3 +1,4 @@
+mod scale;
 #[cfg(any(feature = "test_util", test))]
 mod test_reporter;
 

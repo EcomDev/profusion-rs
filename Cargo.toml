@@ -38,5 +38,9 @@ lto = false
 name = "aggregator_benchmark"
 harness = false
 
+[[bench]]
+name = "aggregator_metric_lookup"
+harness = false
+
 [features]
 test_util = []

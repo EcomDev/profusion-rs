@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2024. EcomDev B.V.
+ * All rights reserved.
+ * See LICENSE for license details.
+ */
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hdrhistogram::Histogram;
 use smallvec::SmallVec;
@@ -106,7 +112,7 @@ impl<M: Metric> FlusherRecorder<M> {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    let mut group = c.benchmark_group("measure_performance");
+    let mut group = c.benchmark_group("decision_on_aggregate");
     let values = black_box(0..2000);
 
     group.bench_with_input("accumulator", &values, |bench, values| {

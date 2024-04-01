@@ -3,7 +3,7 @@ use std::{marker::PhantomData, time::Duration};
 
 /// Test reporter builder
 ///
-/// Creates instances of test reporter for testing
+/// Creates instances of reporter for testing
 pub struct TestReporterBuilder<T>(PhantomData<T>);
 
 /// Test reporter
