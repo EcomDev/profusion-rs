@@ -1,36 +1,38 @@
-use crate::metric::{Metric, MetricRecordError, MetricReporter, MetricReporterBuilder};
 use std::{marker::PhantomData, time::Duration};
 
-/// Test reporter builder
-///
-/// Creates instances of reporter for testing
-pub struct TestReporterBuilder<T>(PhantomData<T>);
+use crate::aggregate::{MetricAggregate, MetricAggregateBuilder};
+use crate::metric::{Metric, MetricRecordError};
 
-/// Test reporter
+/// Test aggregate builder
+///
+/// Creates instances of aggregate for testing
+pub struct TestAggregateBuilder<T>(PhantomData<T>);
+
+/// Test aggregate
 ///
 /// Adds reported metrics to vector for later verification in tests
-pub struct TestReporter<T> {
+pub struct TestAggregate<T> {
     values: Vec<(T, Duration, bool)>,
 }
 
-impl<T> TestReporterBuilder<T> {
+impl<T> TestAggregateBuilder<T> {
     pub fn new() -> Self {
         Self(PhantomData::<T>)
     }
 }
 
-impl<T> MetricReporterBuilder for TestReporterBuilder<T>
+impl<T> MetricAggregateBuilder for TestAggregateBuilder<T>
 where
     T: Metric,
 {
-    type Reporter = TestReporter<T>;
+    type Reporter = TestAggregate<T>;
 
     fn build(&self) -> Self::Reporter {
-        TestReporter { values: Vec::new() }
+        TestAggregate { values: Vec::new() }
     }
 }
 
-impl<T> TestReporter<T>
+impl<T> TestAggregate<T>
 where
     T: Metric,
 {
@@ -39,7 +41,7 @@ where
     }
 }
 
-impl<T> MetricReporter for TestReporter<T>
+impl<T> MetricAggregate for TestAggregate<T>
 where
     T: Metric,
 {
@@ -54,7 +56,7 @@ where
         self.values.push((metric, elapsed, error.is_some()))
     }
 
-    fn aggregate_into(mut self, other: &mut Self) {
+    fn merge_into(mut self, other: &mut Self) {
         other.values.append(&mut self.values);
     }
 }

@@ -1,32 +1,26 @@
-mod error;
-mod recorder;
-mod reporter;
-
-use std::hash::Hash;
+pub use std::hash::Hash;
 
 pub use error::*;
-pub use recorder::*;
-pub use reporter::*;
 
-#[cfg(any(feature = "test_util", test))]
-pub use reporter::TestReporter;
+mod error;
 
-pub trait Metric: Hash + PartialEq + Eq {
-    fn name(&self) -> &'static str;
+pub trait Metric: Hash + Eq + Copy {
+    fn name(&self) -> &str;
 }
 
-impl Metric for &'static str {
-    fn name(&self) -> &'static str {
-        *self
+impl Metric for &str {
+    fn name(&self) -> &str {
+        self
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashMap;
 
-    #[derive(Hash, PartialEq, Eq, Debug)]
+    use super::*;
+
+    #[derive(Hash, PartialEq, Eq, Debug, Copy, Clone)]
     enum TestMetric {
         ConnectionTime,
         RequestTime,
