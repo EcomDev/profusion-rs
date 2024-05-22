@@ -1,0 +1,13 @@
+[package]
+name = "profusion-tests"
+version = "0.1.0"
+authors = ["Ivan Chepurnyi <ivan.chepurnyi@ecomdev.org>"]
+edition = "2021"
+repository = "https://github.com/EcomDev/profusion-rs"
+license = "MIT"
+rust-version = "1.77.0"
+publish = false
+
+[dependencies]
+profusion = { version = "0.1.0", path = "../profusion", features = ["full"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

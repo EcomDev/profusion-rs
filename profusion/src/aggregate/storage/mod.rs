@@ -1,11 +1,11 @@
 pub use combined::*;
-pub use hashmap::*;
+pub use metric::*;
 pub use total::*;
 
 use crate::metric::Metric;
 
 mod combined;
-mod hashmap;
+mod metric;
 mod total;
 
 /// Storage for aggregation of metric values
@@ -27,6 +27,7 @@ pub trait AggregateStorage: Clone + Default + Send {
     /// * `other`: other storage of the same type
     fn merge(self, other: Self) -> Self;
 
+    /// Chains another storage to store metric values in
     fn and<O>(self, other: O) -> CombinedAggregateStorage<Self, O>
     where
         O: AggregateStorage<Metric = Self::Metric>,

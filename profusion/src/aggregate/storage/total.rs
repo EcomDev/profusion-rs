@@ -48,8 +48,8 @@ where
         })
     }
 
-    pub fn value(self) -> Histogram<u64> {
-        self.inner
+    pub fn value(&self) -> &Histogram<u64> {
+        &self.inner
     }
 }
 
@@ -137,12 +137,12 @@ mod tests {
         two.record(TestMetric::Two, 50);
         two.record(TestMetric::One, 50);
 
-        let value = three.merge(two.merge(one)).value();
+        let merged = three.merge(two.merge(one));
 
-        assert_eq!(value.len(), 6);
-        assert_eq!(value.max(), 200);
-        assert_eq!(value.min(), 20);
-        assert_eq!(value.count_at(50), 3)
+        assert_eq!(merged.value().len(), 6);
+        assert_eq!(merged.value().max(), 200);
+        assert_eq!(merged.value().min(), 20);
+        assert_eq!(merged.value().count_at(50), 3)
     }
 
     #[test]
