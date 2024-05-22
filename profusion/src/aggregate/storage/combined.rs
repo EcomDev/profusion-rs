@@ -1,23 +1,21 @@
 use crate::aggregate::AggregateStorage;
-use crate::metric::Metric;
 
 pub struct CombinedAggregateStorage<L, R>(L, R);
 
-impl<L, R, T> Clone for CombinedAggregateStorage<L, R>
+impl<L, R> Clone for CombinedAggregateStorage<L, R>
 where
-    L: AggregateStorage<Metric = T>,
-    R: AggregateStorage<Metric = T>,
+    L: AggregateStorage,
+    R: AggregateStorage<Metric = L::Metric>,
 {
     fn clone(&self) -> Self {
         Self(self.0.clone(), self.1.clone())
     }
 }
 
-impl<L, R, T> CombinedAggregateStorage<L, R>
+impl<L, R> CombinedAggregateStorage<L, R>
 where
-    L: AggregateStorage<Metric = T>,
-    R: AggregateStorage<Metric = T>,
-    T: Metric,
+    L: AggregateStorage,
+    R: AggregateStorage<Metric = L::Metric>,
 {
     pub fn new(left: L, right: R) -> Self {
         Self(left, right)
@@ -28,24 +26,22 @@ where
     }
 }
 
-impl<L, R, T> Default for CombinedAggregateStorage<L, R>
+impl<L, R> Default for CombinedAggregateStorage<L, R>
 where
-    L: AggregateStorage<Metric = T> + Default,
-    R: AggregateStorage<Metric = T> + Default,
-    T: Metric,
+    L: AggregateStorage + Default,
+    R: AggregateStorage<Metric = L::Metric> + Default,
 {
     fn default() -> Self {
         Self(L::default(), R::default())
     }
 }
 
-impl<L, R, T> AggregateStorage for CombinedAggregateStorage<L, R>
+impl<L, R> AggregateStorage for CombinedAggregateStorage<L, R>
 where
-    L: AggregateStorage<Metric = T>,
-    R: AggregateStorage<Metric = T>,
-    T: Metric,
+    L: AggregateStorage,
+    R: AggregateStorage<Metric = L::Metric>,
 {
-    type Metric = T;
+    type Metric = L::Metric;
 
     #[inline]
     fn record(&mut self, metric: Self::Metric, latency_value: u64) {
@@ -60,9 +56,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::aggregate::storage::{AggregateStorage, TotalAggregateStorage};
-
-    use super::*;
+    use crate::prelude::*;
 
     #[derive(Eq, PartialEq, Hash, Copy, Clone)]
     enum TestMetric {
@@ -78,8 +72,7 @@ mod tests {
 
     #[test]
     fn stores_values_into_each_storage() {
-        let mut storage =
-            TotalAggregateStorage::default().and(TotalAggregateStorage::default());
+        let mut storage = TotalAggregateStorage::default().and(TotalAggregateStorage::default());
 
         storage.record(TestMetric::One, 100);
         storage.record(TestMetric::Two, 20);
@@ -101,8 +94,7 @@ mod tests {
 
     #[test]
     fn merges_from_all_storages() {
-        let mut one =
-            TotalAggregateStorage::default().and(TotalAggregateStorage::default());
+        let mut one = TotalAggregateStorage::default().and(TotalAggregateStorage::default());
 
         let (mut two, three) = (one.clone(), one.clone());
 

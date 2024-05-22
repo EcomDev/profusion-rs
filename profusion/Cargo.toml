@@ -1,0 +1,42 @@
+[package]
+name = "profusion"
+version = "0.1.0"
+authors = ["Ivan Chepurnyi <ivan.chepurnyi@ecomdev.org>"]
+edition = "2021"
+repository = "https://github.com/EcomDev/profusion-rs"
+license = "MIT"
+rust-version = "1.77.0"
+
+[lib]
+name = "profusion"
+crate-type = ["lib"]
+
+[dependencies]
+tokio = { version = "1", features = ["rt", "time", "macros", "test-util"] }
+pin-project-lite = "0.2"
+hdrhistogram = "7"
+thiserror = "1"
+rustc-hash = "1.1.0"
+trait-variant = "0.1.2"
+tracing = "0.1.40"
+serde = { version = "1", features = ["derive"], optional = true }
+profusion-macros = { version = "~0.1.0", path = "../profusion-macros", optional = true }
+
+[dev-dependencies]
+loom = "0.7"
+itertools = "0.12"
+criterion = { version = "0.5", features = ["default", "async_tokio"] }
+tokio = { version = "1", features = ["rt", "time", "macros", "rt-multi-thread", "test-util"] }
+serde_test = { version = "1" }
+
+[[bench]]
+name = "aggregator_storage"
+harness = false
+
+[features]
+test_util = []
+macros = ["profusion-macros"]
+full = ["test_util", "macros"]
+
+[package.metadata.docs.rs]
+all-features = true

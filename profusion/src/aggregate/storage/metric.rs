@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Formatter};
+
 use hdrhistogram::{CreationError, Histogram};
 pub use rustc_hash::FxHashMap;
 use tracing::error;
@@ -8,6 +10,17 @@ use crate::metric::Metric;
 pub struct MetricAggregateStorage<T> {
     inner: FxHashMap<T, Histogram<u64>>,
     proto: Histogram<u64>,
+}
+
+impl<T> Debug for MetricAggregateStorage<T>
+where
+    T: Metric + Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("MetricAggregateStorage { storage: {")?;
+        self.inner.iter().fmt(f)?;
+        f.write_str("} }")
+    }
 }
 
 impl<T> Default for MetricAggregateStorage<T>
@@ -44,8 +57,8 @@ where
         })
     }
 
-    pub fn value(&self, metric: T) -> &Histogram<u64> {
-        &self.inner.get(&metric).unwrap_or(&self.proto)
+    pub(crate) fn value(&self, metric: T) -> &Histogram<u64> {
+        self.inner.get(&metric).unwrap_or(&self.proto)
     }
 }
 
@@ -106,7 +119,10 @@ mod tests {
 
     impl Metric for TestMetric {
         fn name(&self) -> &str {
-            "metric"
+            match self {
+                Self::One => "metric_one",
+                Self::Two => "metric_two",
+            }
         }
     }
 

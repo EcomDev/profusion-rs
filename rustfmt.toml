@@ -1,4 +1,9 @@
-max_width = 90
+max_width = 100
+array_width = 80
+attr_fn_like_width = 90
+chain_width = 80
+comment_width = 90
 format_strings = true
 indent_style = "Block"
+reorder_imports = true
 imports_granularity = "Crate"

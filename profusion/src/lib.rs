@@ -1,5 +1,8 @@
 //-
 
+#[cfg(feature = "macros")]
+pub use profusion_macros::*;
+
 pub mod aggregate;
 pub mod measurer;
 pub mod metric;
